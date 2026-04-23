@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STC SNOOKER SCORE - Match History</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .history-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 30px;
+        }
+        .history-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
+        }
+        .history-card:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .match-date {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .match-players {
+            font-size: 24px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .match-score {
+            background: rgba(0,0,0,0.6);
+            padding: 5px 20px;
+            border-radius: 30px;
+            color: #fbbf24;
+            font-family: 'Outfit', sans-serif;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .match-stats {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+        .winner {
+            color: #10b981;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="history-container glass">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px;">
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 28px; background: linear-gradient(to right, #3b82f6, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-trophy"></i> ประวัติการแข่งขัน</h2>
+            <a href="/" style="color: white; text-decoration: none; padding: 10px 20px; background: rgba(255,255,255,0.1); border-radius: 8px; font-weight: 600; transition: 0.2s;"><i class="fa-solid fa-arrow-left"></i> กลับหน้าควบคุม</a>
+        </div>
+        
+        <div id="history-list">
+            <!-- Loading -->
+            <p style="text-align: center; color: var(--text-muted);">กำลังโหลดข้อมูล...</p>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('connect', () => {
+            socket.emit('requestHistory');
+        });
+
+        socket.on('updateHistory', (history) => {
+            const container = document.getElementById('history-list');
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color: #94a3b8; padding: 60px; background: rgba(0,0,0,0.2); border-radius: 12px;"><i class="fa-solid fa-ghost" style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;"></i><br>ยังไม่มีประวัติการแข่งขัน<br><span style="font-size:12px; margin-top:5px; display:block;">กดปุ่ม "บันทึก & จบแมตช์" เพื่อบันทึกสถิติมาแสดงที่นี่</span></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            history.forEach(match => {
+                const card = document.createElement('div');
+                card.className = 'history-card';
+                
+                let p1Class = match.score1 > match.score2 ? 'winner' : '';
+                let p2Class = match.score2 > match.score1 ? 'winner' : '';
+                
+                let framesHtml = '';
+                if (match.frames && match.frames.length > 0) {
+                    let frameRows = match.frames.map((f, i) => {
+                        let p1Winner = f.winner === 1 ? 'winner-yellow' : '';
+                        let p2Winner = f.winner === 2 ? 'winner-yellow' : '';
+                        return `
+                            <div class="frame-row">
+                                <span class="f-num">เฟรมที่ ${i+1}</span>
+                                <div class="f-scores">
+                                    <span class="f-score ${p1Winner}">${f.p1Score}</span>
+                                    <span style="color:rgba(255,255,255,0.2)">-</span>
+                                    <span class="f-score ${p2Winner}">${f.p2Score}</span>
+                                </div>
+                                <span style="width:60px;"></span>
+                            </div>
+                        `;
+                    }).join('');
+
+                    framesHtml = `
+                        <details class="frame-details" style="grid-column: span 2; width: 100%;">
+                            <summary><i class="fa-solid fa-list-ol"></i> ดูคะแนนแต่ละเฟรม</summary>
+                            <div class="frame-list">
+                                ${frameRows}
+                            </div>
+                        </details>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div style="flex:1;">
+                        <div class="match-date"><i class="fa-regular fa-calendar"></i> ${match.date} | <span style="color:#fbbf24">แข่งใครถึง ${match.format}</span></div>
+                        <div class="match-players">
+                            <span class="${p1Class}">${match.player1}</span>
+                            <span class="match-score">${match.score1} - ${match.score2}</span>
+                            <span class="${p2Class}">${match.player2}</span>
+                        </div>
+                    </div>
+                    <div class="match-stats">
+                        <div style="color: white; margin-bottom: 5px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;"><i class="fa-solid fa-bolt"></i> เบรกสูงสุด</div>
+                        <div style="display:flex; justify-content:space-between; width: 180px; margin-bottom: 2px;">
+                            <span>${match.player1}</span> 
+                            <span style="color:#10b981; font-weight:bold;">${match.stats.p1HighestBreak}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; width: 180px;">
+                            <span>${match.player2}</span> 
+                            <span style="color:#10b981; font-weight:bold;">${match.stats.p2HighestBreak}</span>
+                        </div>
+                    </div>
+                    ${framesHtml}
+                `;
+                card.style.flexWrap = 'wrap';
+                container.appendChild(card);
+            });
+        });
+    </script>
+</body>
+</html>

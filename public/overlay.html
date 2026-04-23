@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snooker Premium Overlay</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important; /* OBS standard */
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
+            color: white;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 100vh;
+            padding-bottom: 30px; /* Distance from bottom */
+        }
+
+        .scoreboard-container {
+            display: flex;
+            align-items: stretch;
+            height: 56px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border-radius: 4px;
+            overflow: hidden; /* Sharp corners like TV broadcast */
+            background: rgba(15, 23, 42, 0.95); /* Dark blue/gray base */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: scale(1); /* Adjust this if they want it smaller/larger globally */
+        }
+
+        .section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Player Names */
+        .name-box {
+            width: 250px;
+            font-size: 22px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 20px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            background: linear-gradient(180deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);
+        }
+
+        .p1-name { justify-content: flex-end; text-align: right; border-right: 1px solid rgba(0,0,0,0.5); }
+        .p2-name { justify-content: flex-start; text-align: left; border-left: 1px solid rgba(0,0,0,0.5); }
+
+        /* Break Indicator inside Name */
+        .break-text {
+            font-size: 14px;
+            font-weight: 900;
+            color: #fbbf24; /* Gold */
+            margin: 0 15px;
+            display: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .active-p1 .p1-name .break-text { display: block; }
+        .active-p2 .p2-name .break-text { display: block; }
+
+        /* Frame Score */
+        .frame-box {
+            width: 50px;
+            background: #1e293b;
+            font-size: 24px;
+            font-weight: 900;
+            color: #fbbf24; /* Golden text for frames */
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Points Score */
+        .score-box {
+            width: 80px;
+            font-size: 38px;
+            font-weight: 900;
+            background: #0f172a;
+            color: white;
+            transition: all 0.3s;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* Active State Colors */
+        .active-p1 .p1-score {
+            background: #2563eb; /* Bright Blue */
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.2);
+        }
+        .active-p2 .p2-score {
+            background: #dc2626; /* Bright Red */
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        /* Center Match Info */
+        .center-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 140px;
+            background: #000000;
+            padding: 0 10px;
+        }
+
+        .center-info .match-format {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .center-info .points-left {
+            font-size: 16px;
+            color: white;
+            font-weight: 700;
+        }
+        .center-info .points-left span { color: #10b981; } /* Green */
+
+        /* Target Indicator (Small triangle pointing to active player) */
+        .active-indicator {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 4px;
+            background: #fbbf24;
+            display: none;
+        }
+        .active-p1 .p1-name .active-indicator { display: block; }
+        .active-p2 .p2-name .active-indicator { display: block; }
+
+        /* Animation */
+        .score-changed { animation: flash 0.4s ease-out; }
+        @keyframes flash {
+            0% { background-color: white; color: black; }
+            100% { }
+        }
+
+        /* --------------------------------------
+           THEMES 
+           -------------------------------------- */
+
+        /* Theme 1: Default (Dark Navy) is handled by the default styles above */
+        
+        /* Theme 2: Glassmorphism (theme-glass) */
+        body.theme-glass .scoreboard-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        body.theme-glass .name-box { background: rgba(0, 0, 0, 0.4); border-color: rgba(255,255,255,0.2); }
+        body.theme-glass .frame-box { background: rgba(0, 0, 0, 0.5); border-color: rgba(255,255,255,0.2); }
+        body.theme-glass .center-info { background: rgba(255, 255, 255, 0.2); }
+        body.theme-glass .center-info .match-format { color: #1e293b; }
+        body.theme-glass .center-info .points-left { color: #1e293b; }
+        body.theme-glass .center-info .points-left span { color: #047857; font-weight: 900; }
+        body.theme-glass .score-box { background: rgba(0, 0, 0, 0.6); }
+
+        /* Theme 3: Classic Snooker Green (theme-green) */
+        body.theme-green .scoreboard-container { background: #064e3b; border: 2px solid #fbbf24; }
+        body.theme-green .name-box { background: linear-gradient(180deg, #065f46 0%, #064e3b 100%); }
+        body.theme-green .frame-box { background: #022c22; border-color: #fbbf24; }
+        body.theme-green .center-info { background: #022c22; }
+        body.theme-green .center-info .points-left span { color: #fbbf24; }
+        body.theme-green .score-box { background: #022c22; }
+        body.theme-green .active-p1 .p1-score { background: #15803d; border-right: 2px solid #fbbf24; }
+        body.theme-green .active-p2 .p2-score { background: #15803d; border-left: 2px solid #fbbf24; }
+        
+        /* Theme 4: OLED True Black (theme-black) */
+        body.theme-black .scoreboard-container { background: #000000; border: 1px solid #333333; }
+        body.theme-black .name-box { background: #000000; border-color: #333333; }
+        body.theme-black .frame-box { background: #000000; border-color: #333333; }
+        body.theme-black .center-info { background: #000000; }
+        body.theme-black .score-box { background: #000000; border-left: 1px solid #333333; border-right: 1px solid #333333; }
+        body.theme-black .active-p1 .p1-score { background: #1d4ed8; }
+        body.theme-black .active-p2 .p2-score { background: #b91c1c; }
+
+        /* Theme 5: Neon Cyberpunk (theme-neon) */
+        body.theme-neon .scoreboard-container { background: #120422; border: 1px solid #c026d3; box-shadow: 0 0 20px rgba(192, 38, 211, 0.4); }
+        body.theme-neon .name-box { background: #120422; border-color: #c026d3; }
+        body.theme-neon .frame-box { background: #120422; color: #22d3ee; border-color: #c026d3; }
+        body.theme-neon .center-info { background: #2e1065; }
+        body.theme-neon .center-info .points-left span { color: #22d3ee; }
+        body.theme-neon .score-box { background: #2e1065; }
+        body.theme-neon .active-p1 .p1-score { background: #9333ea; box-shadow: 0 0 15px #9333ea; z-index: 10; }
+        body.theme-neon .active-p2 .p2-score { background: #db2777; box-shadow: 0 0 15px #db2777; z-index: 10; }
+        body.theme-neon .active-indicator { background: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
+        body.theme-neon .break-text { color: #22d3ee; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard-container active-p1" id="overlay-main">
+        
+        <!-- Player 1 -->
+        <div class="section frame-box" id="p1-frame">0</div>
+        <div class="section name-box p1-name">
+            <div class="active-indicator"></div>
+            <span class="break-text" id="p1-break">เบรก: 0</span>
+            <span id="p1-name">ผู้เล่น 1</span>
+        </div>
+        <div class="section score-box p1-score" id="p1-score">0</div>
+
+        <!-- Center Match Info -->
+        <div class="section center-info">
+            <div class="match-format" id="match-format">แข่งใครถึง 3</div>
+            <div class="points-left">แต้มบนโต๊ะ: <span id="max-points">147</span></div>
+        </div>
+
+        <!-- Player 2 -->
+        <div class="section score-box p2-score" id="p2-score">0</div>
+        <div class="section name-box p2-name">
+            <div class="active-indicator"></div>
+            <span id="p2-name">ผู้เล่น 2</span>
+            <span class="break-text" id="p2-break">เบรก: 0</span>
+        </div>
+        <div class="section frame-box" id="p2-frame">0</div>
+
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const overlay = document.getElementById('overlay-main');
+        
+        let lastP1Score = 0;
+        let lastP2Score = 0;
+
+        socket.on('updateState', (state) => {
+            const p1ScoreEl = document.getElementById('p1-score');
+            const p2ScoreEl = document.getElementById('p2-score');
+
+            // Trigger flash animation if score changed
+            if (state.player1.score !== lastP1Score) {
+                p1ScoreEl.classList.remove('score-changed');
+                void p1ScoreEl.offsetWidth;
+                p1ScoreEl.classList.add('score-changed');
+            }
+            if (state.player2.score !== lastP2Score) {
+                p2ScoreEl.classList.remove('score-changed');
+                void p2ScoreEl.offsetWidth;
+                p2ScoreEl.classList.add('score-changed');
+            }
+
+            lastP1Score = state.player1.score;
+            lastP2Score = state.player2.score;
+
+            document.getElementById('p1-name').innerText = state.player1.name;
+            p1ScoreEl.innerText = state.player1.score;
+            document.getElementById('p1-frame').innerText = state.player1.frame;
+            
+            document.getElementById('p2-name').innerText = state.player2.name;
+            p2ScoreEl.innerText = state.player2.score;
+            document.getElementById('p2-frame').innerText = state.player2.frame;
+
+            // Extra Info
+            document.getElementById('match-format').innerText = `แข่งใครถึง ${state.matchFormat}`;
+            const maxPoints = (state.redsLeft * 8) + 27;
+            document.getElementById('max-points').innerText = maxPoints;
+
+            document.getElementById('p1-break').innerText = `เบรก: ${state.currentBreak}`;
+            document.getElementById('p2-break').innerText = `เบรก: ${state.currentBreak}`;
+            
+            // Show break text only if > 0
+            document.getElementById('p1-break').style.display = (state.activePlayer === 1 && state.currentBreak > 0) ? 'block' : 'none';
+            document.getElementById('p2-break').style.display = (state.activePlayer === 2 && state.currentBreak > 0) ? 'block' : 'none';
+
+            // Theme Setting
+            document.body.className = state.theme || 'theme-default';
+
+            // Update Active Player
+            overlay.className = 'scoreboard-container'; 
+            if (state.activePlayer === 1) {
+                overlay.classList.add('active-p1');
+            } else {
+                overlay.classList.add('active-p2');
+            }
+        });
+    </script>
+</body>
+</html>

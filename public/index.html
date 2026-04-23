@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STC SNOOKER SCORE</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="glass header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <h1 style="white-space: nowrap;"><i class="fa-solid fa-gamepad"></i> STC SNOOKER SCORE</h1>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <select id="match-format" onchange="setMatchFormat(this.value)" style="background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px;">
+                    <option value="1">แข่งใครถึง 1 เฟรม</option>
+                    <option value="2">แข่งใครถึง 2 เฟรม</option>
+                    <option value="3" selected>แข่งใครถึง 3 เฟรม</option>
+                    <option value="4">แข่งใครถึง 4 เฟรม</option>
+                    <option value="5">แข่งใครถึง 5 เฟรม</option>
+                    <option value="6">แข่งใครถึง 6 เฟรม</option>
+                </select>
+                <select id="max-reds" onchange="setMaxReds(this.value)" style="background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px;">
+                    <option value="15" selected>สนุ๊ก 15 แดง</option>
+                    <option value="6">สนุ๊ก 6 แดง</option>
+                </select>
+                <select id="game-mode" onchange="setGameMode(this.value)" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.5); padding: 5px 10px; border-radius: 5px; font-weight: bold;">
+                    <option value="snooker">🔴 กติกา: สนุ๊กเกอร์ (Snooker)</option>
+                    <option value="faifa">⚡ กติกา: ไฟฟ้า (Faifa 1-15)</option>
+                    <option value="taem">🎯 กติกา: สนุ๊กแต้ม</option>
+                </select>
+                <select id="overlay-theme" onchange="setTheme(this.value)" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.5); padding: 5px 10px; border-radius: 5px; font-weight: bold;">
+                    <option value="theme-default">🎨 ธีม 1: คลาสสิกน้ำเงิน (TV)</option>
+                    <option value="theme-glass">🎨 ธีม 2: กระจกใส (Glass)</option>
+                    <option value="theme-green">🎨 ธีม 3: เขียวมรกต (Classic)</option>
+                    <option value="theme-black">🎨 ธีม 4: ดำสนิท (OLED)</option>
+                    <option value="theme-neon">🎨 ธีม 5: นีออน (Cyberpunk)</option>
+                </select>
+                <a href="history.html" target="_blank" style="background: #3b82f6; color: white; padding: 5px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการแข่งขัน
+                </a>
+            </div>
+        </div>
+
+        <!-- Roster Section -->
+        <div class="glass extra-section">
+            <div class="section-title" style="text-align: left;"><i class="fa-solid fa-users"></i> ทะเบียนรายชื่อนักกีฬา (กดเพื่อตั้งเป็นผู้เล่น)</div>
+            <div class="roster-input-group">
+                <input type="text" id="new-player-name" placeholder="พิมพ์ชื่อนักกีฬาเพื่อเพิ่มลงทะเบียน...">
+                <button class="action-btn" style="background:#3b82f6;" onclick="addRoster()"><i class="fa-solid fa-plus"></i> เพิ่มชื่อ</button>
+            </div>
+            <div class="roster-list" id="roster-list">
+                <!-- Javascript will populate this -->
+            </div>
+        </div>
+
+        <div class="glass scoreboard">
+            <!-- Player 1 -->
+            <div class="player-card p1 active" id="p1-card" onclick="setActivePlayer(1)">
+                <input type="text" class="player-name" id="p1-name" value="ผู้เล่น 1" onchange="updateName(1, this.value)">
+                <div class="score-display" id="p1-score">0</div>
+                
+                <div class="frame-controls">
+                    <span class="frame-score">ได้เฟรม: <span id="p1-frame">0</span></span>
+                    <button class="frame-btn" onclick="event.stopPropagation(); addFrame(1)"><i class="fa-solid fa-circle-plus"></i></button>
+                    <button class="frame-btn" onclick="event.stopPropagation(); subFrame(1)"><i class="fa-solid fa-circle-minus"></i></button>
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 5px;">
+                    <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(1, 1)">+1 แต้มต่อ</button>
+                    <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(1, -1)">-1</button>
+                </div>
+            </div>
+
+            <div class="center-col">
+                <div class="timer-box" id="timer-display" onclick="toggleTimer()">00:00:00</div>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn" onclick="toggleTimer()" style="padding: 5px 10px; background: rgba(255,255,255,0.1);"><i class="fa-solid fa-play"></i></button>
+                    <button class="action-btn" onclick="resetTimer()" style="padding: 5px 10px; background: rgba(255,255,255,0.1);"><i class="fa-solid fa-stop"></i></button>
+                </div>
+                
+                <button class="frame-btn" style="margin: 10px 0; font-size: 24px;" onclick="swapPlayers()" title="Swap Players"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
+                
+                <div class="break-box">
+                    <div class="break-title">เบรกปัจจุบัน</div>
+                    <div class="break-score" id="current-break">0</div>
+                </div>
+            </div>
+
+            <!-- Player 2 -->
+            <div class="player-card p2" id="p2-card" onclick="setActivePlayer(2)">
+                <input type="text" class="player-name" id="p2-name" value="ผู้เล่น 2" onchange="updateName(2, this.value)">
+                <div class="score-display" id="p2-score">0</div>
+                
+                <div class="frame-controls">
+                    <span class="frame-score">ได้เฟรม: <span id="p2-frame">0</span></span>
+                    <button class="frame-btn" onclick="event.stopPropagation(); addFrame(2)"><i class="fa-solid fa-circle-plus"></i></button>
+                    <button class="frame-btn" onclick="event.stopPropagation(); subFrame(2)"><i class="fa-solid fa-circle-minus"></i></button>
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 5px;">
+                    <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(2, 1)">+1 แต้มต่อ</button>
+                    <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(2, -1)">-1</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="glass extra-section">
+            <div class="section-title" style="text-align: left;"><i class="fa-solid fa-chart-simple"></i> สถิติแมตช์นี้ (Match Stats)</div>
+            <div style="display: flex; justify-content: space-between; text-align: center; gap: 10px;">
+                <div class="stat-box" style="flex: 1;">
+                    <h4 style="color:var(--p1-color); margin-bottom: 5px;" id="stat-p1-name">ผู้เล่น 1</h4>
+                    <p style="font-size: 13px;">เบรกสูงสุด: <strong id="stat-p1-break" style="font-size: 16px;">0</strong></p>
+                    <p style="font-size: 13px;">คะแนนรวม: <strong id="stat-p1-total" style="font-size: 16px;">0</strong></p>
+                </div>
+                <div class="stat-box" style="flex: 1;">
+                    <h4 style="color:var(--p2-color); margin-bottom: 5px;" id="stat-p2-name">ผู้เล่น 2</h4>
+                    <p style="font-size: 13px;">เบรกสูงสุด: <strong id="stat-p2-break" style="font-size: 16px;">0</strong></p>
+                    <p style="font-size: 13px;">คะแนนรวม: <strong id="stat-p2-total" style="font-size: 16px;">0</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-grid" id="mode-snooker">
+            <!-- Left Side: Balls (Snooker) -->
+            <div class="glass balls-container">
+                <div class="section-title">ลูกสนุ๊กเกอร์ (แต้ม)</div>
+                <div class="table-info" style="margin-bottom: 10px;">
+                    เหลือแดง: <button onclick="adjustReds(-1)" style="background:none; border:none; color:white; font-size:16px; cursor:pointer;"><i class="fa-solid fa-minus"></i></button> 
+                    <strong id="reds-left">15</strong> 
+                    <button onclick="adjustReds(1)" style="background:none; border:none; color:white; font-size:16px; cursor:pointer;"><i class="fa-solid fa-plus"></i></button>
+                    | แต้มบนโต๊ะสูงสุด: <strong id="max-points">147</strong>
+                </div>
+                <div class="balls-grid">
+                    <button class="ball-btn ball-red" onclick="addScore(1, false)">1</button>
+                    <button class="ball-btn ball-yellow" onclick="addScore(2, false)">2</button>
+                    <button class="ball-btn ball-green" onclick="addScore(3, false)">3</button>
+                    <button class="ball-btn ball-brown" onclick="addScore(4, false)">4</button>
+                    <button class="ball-btn ball-blue" onclick="addScore(5, false)">5</button>
+                    <button class="ball-btn ball-pink" onclick="addScore(6, false)">6</button>
+                    <button class="ball-btn ball-black" onclick="addScore(7, false)">7</button>
+                    <button class="ball-btn" style="background: rgba(255,255,255,0.2); font-size: 14px;" onclick="addScore(1, true)">FREE<br>BALL</button>
+                </div>
+            </div>
+
+            <!-- Right Side: Fouls (Snooker) -->
+            <div class="glass foul-container">
+                <div class="section-title">ฟาวล์ (ให้แต้มฝ่ายตรงข้าม)</div>
+                <div class="foul-grid">
+                    <button class="foul-btn" onclick="foul(4)">ฟาวล์ 4</button>
+                    <button class="foul-btn" onclick="foul(5)">ฟาวล์ 5</button>
+                    <button class="foul-btn" onclick="foul(6)">ฟาวล์ 6</button>
+                    <button class="foul-btn" onclick="foul(7)">ฟาวล์ 7</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-grid" id="mode-faifa" style="display:none;">
+            <!-- Left Side: Balls (Faifa) -->
+            <div class="glass balls-container">
+                <div class="section-title">ลูกไฟฟ้า (1-15)</div>
+                <div class="balls-grid" style="grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                    <button class="ball-btn" style="background:#fbbf24; color:black;" onclick="addScore(1, false)">1</button>
+                    <button class="ball-btn" style="background:#3b82f6;" onclick="addScore(2, false)">2</button>
+                    <button class="ball-btn" style="background:#ef4444;" onclick="addScore(3, false)">3</button>
+                    <button class="ball-btn" style="background:#a855f7;" onclick="addScore(4, false)">4</button>
+                    <button class="ball-btn" style="background:#f97316;" onclick="addScore(5, false)">5</button>
+                    
+                    <button class="ball-btn" style="background:#22c55e;" onclick="addScore(6, false)">6</button>
+                    <button class="ball-btn" style="background:#92400e;" onclick="addScore(7, false)">7</button>
+                    <button class="ball-btn" style="background:#111827;" onclick="addScore(8, false)">8</button>
+                    <button class="ball-btn" style="background:#fbbf24; border: 3px solid white; color:black;" onclick="addScore(9, false)">9</button>
+                    <button class="ball-btn" style="background:#3b82f6; border: 3px solid white;" onclick="addScore(10, false)">10</button>
+                    
+                    <button class="ball-btn" style="background:#ef4444; border: 3px solid white;" onclick="addScore(11, false)">11</button>
+                    <button class="ball-btn" style="background:#a855f7; border: 3px solid white;" onclick="addScore(12, false)">12</button>
+                    <button class="ball-btn" style="background:#f97316; border: 3px solid white;" onclick="addScore(13, false)">13</button>
+                    <button class="ball-btn" style="background:#22c55e; border: 3px solid white;" onclick="addScore(14, false)">14</button>
+                    <button class="ball-btn" style="background:#92400e; border: 3px solid white;" onclick="addScore(15, false)">15</button>
+                </div>
+            </div>
+
+            <!-- Right Side: Fouls (Faifa) -->
+            <div class="glass foul-container">
+                <div class="section-title">ฟาวล์ / ปรับแต้ม</div>
+                <div class="foul-grid">
+                    <button class="foul-btn" onclick="foul(5)">คู่แข่ง +5</button>
+                    <button class="foul-btn" onclick="foul(7)">คู่แข่ง +7</button>
+                    <button class="foul-btn" onclick="customScore(activePlayerId, -5)">หักตัวเอง -5</button>
+                    <button class="foul-btn" onclick="customScore(activePlayerId, -7)">หักตัวเอง -7</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-grid" id="mode-taem" style="display:none;">
+            <!-- Left Side: Balls (Taem) -->
+            <div class="glass balls-container">
+                <div class="section-title">ลูกสนุ๊กแต้ม (สี)</div>
+                <div class="balls-grid">
+                    <button class="ball-btn ball-red" onclick="addScore(1, false)">1</button>
+                    <button class="ball-btn ball-yellow" onclick="addScore(2, false)">2</button>
+                    <button class="ball-btn ball-green" onclick="addScore(3, false)">3</button>
+                    <button class="ball-btn ball-brown" onclick="addScore(4, false)">4</button>
+                    <button class="ball-btn ball-blue" onclick="addScore(5, false)">5</button>
+                    <button class="ball-btn ball-pink" onclick="addScore(6, false)">6</button>
+                    <button class="ball-btn ball-black" onclick="addScore(7, false)">7</button>
+                </div>
+            </div>
+
+            <!-- Right Side: Manual Points (Taem) -->
+            <div class="glass foul-container">
+                <div class="section-title">บวกแต้มพิเศษ (ต่อให้/พิเศษ)</div>
+                <div class="foul-grid">
+                    <button class="foul-btn" style="background:rgba(16,185,129,0.2); border-color:#10b981;" onclick="customScore(activePlayerId, 5)">+5 แต้ม</button>
+                    <button class="foul-btn" style="background:rgba(16,185,129,0.2); border-color:#10b981;" onclick="customScore(activePlayerId, 10)">+10 แต้ม</button>
+                    <button class="foul-btn" style="background:rgba(239,68,68,0.2); border-color:#ef4444;" onclick="customScore(activePlayerId, -5)">-5 แต้ม</button>
+                    <button class="foul-btn" style="background:rgba(239,68,68,0.2); border-color:#ef4444;" onclick="customScore(activePlayerId, -10)">-10 แต้ม</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="glass bottom-actions" style="margin-bottom: 20px;">
+            <button class="action-btn undo" onclick="undoAction()"><i class="fa-solid fa-rotate-left"></i> ย้อนกลับ (Undo)</button>
+            <button class="action-btn new-frame" onclick="newFrame()"><i class="fa-solid fa-plus"></i> เริ่มเฟรมใหม่</button>
+            <button class="action-btn" style="background: #eab308; color: black;" onclick="saveMatch()"><i class="fa-solid fa-floppy-disk"></i> บันทึก & จบแมตช์</button>
+            <button class="action-btn reset" onclick="resetMatch()"><i class="fa-solid fa-trash"></i> ล้างข้อมูลแมตช์</button>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title">ยืนยัน</h3>
+            <p id="modal-message">ข้อความ...</p>
+            <div class="modal-actions">
+                <button class="action-btn" style="background: rgba(255,255,255,0.1); color: white;" onclick="closeModal()">ยกเลิก</button>
+                <button class="action-btn" id="modal-confirm" style="background: #3b82f6; color: white;">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let activePlayerId = 1;
+        
+        let timerRunning = false;
+        let timerElapsed = 0;
+        let timerStart = null;
+
+        // Custom Modal Logic
+        let confirmCallback = null;
+        function showConfirm(title, message, callback, confirmColor = '#3b82f6') {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = message;
+            document.getElementById('modal-confirm').style.background = confirmColor;
+            confirmCallback = callback;
+            document.getElementById('custom-modal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('custom-modal').classList.remove('active');
+            confirmCallback = null;
+        }
+        document.getElementById('modal-confirm').onclick = () => {
+            if(confirmCallback) confirmCallback();
+            closeModal();
+        };
+
+        function updateTimerDisplay() {
+            let totalSeconds = timerElapsed;
+            if (timerRunning && timerStart) {
+                totalSeconds += Math.floor((Date.now() - timerStart) / 1000);
+            }
+            
+            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const s = String(totalSeconds % 60).padStart(2, '0');
+            
+            document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
+        }
+
+        setInterval(() => {
+            if (timerRunning) updateTimerDisplay();
+        }, 1000);
+
+        socket.on('updateState', (state) => {
+            // Update Core UI
+            document.getElementById('p1-name').value = state.player1.name;
+            document.getElementById('p1-score').innerText = state.player1.score;
+            document.getElementById('p1-frame').innerText = state.player1.frame;
+            
+            document.getElementById('p2-name').value = state.player2.name;
+            document.getElementById('p2-score').innerText = state.player2.score;
+            document.getElementById('p2-frame').innerText = state.player2.frame;
+
+            document.getElementById('current-break').innerText = state.currentBreak;
+            
+            document.getElementById('match-format').value = state.matchFormat;
+            document.getElementById('max-reds').value = state.maxReds;
+            
+            if(document.getElementById('overlay-theme')) {
+                document.getElementById('overlay-theme').value = state.theme || 'theme-default';
+            }
+            if(document.getElementById('game-mode')) {
+                document.getElementById('game-mode').value = state.gameMode || 'snooker';
+                
+                // Show/Hide specific control grids
+                document.getElementById('mode-snooker').style.display = 'none';
+                document.getElementById('mode-faifa').style.display = 'none';
+                document.getElementById('mode-taem').style.display = 'none';
+                
+                const activeModeStr = 'mode-' + (state.gameMode || 'snooker');
+                if (document.getElementById(activeModeStr)) {
+                    document.getElementById(activeModeStr).style.display = 'grid';
+                }
+            }
+            
+            document.getElementById('reds-left').innerText = state.redsLeft;
+            const maxPoints = (state.redsLeft * 8) + 27;
+            document.getElementById('max-points').innerText = maxPoints;
+
+            // Update Stats UI
+            document.getElementById('stat-p1-name').innerText = state.player1.name;
+            document.getElementById('stat-p1-break').innerText = state.stats.p1HighestBreak;
+            document.getElementById('stat-p1-total').innerText = state.stats.p1TotalPoints;
+            
+            document.getElementById('stat-p2-name').innerText = state.player2.name;
+            document.getElementById('stat-p2-break').innerText = state.stats.p2HighestBreak;
+            document.getElementById('stat-p2-total').innerText = state.stats.p2TotalPoints;
+
+            // Update Roster
+            const rosterContainer = document.getElementById('roster-list');
+            rosterContainer.innerHTML = '';
+            state.playersRoster.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'roster-item';
+                item.innerHTML = `
+                    <div class="r-name" title="${name}">${name}</div>
+                    <div class="roster-item-btns">
+                        <button class="sel-p1" onclick="updateName(1, '${name.replace(/'/g, "\\'")}')">P1</button>
+                        <button class="sel-p2" onclick="updateName(2, '${name.replace(/'/g, "\\'")}')">P2</button>
+                        <button onclick="delRoster('${name.replace(/'/g, "\\'")}')" style="background: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                rosterContainer.appendChild(item);
+            });
+
+            activePlayerId = state.activePlayer;
+            updateActiveCard();
+
+            // Update Timer sync
+            timerRunning = state.timer.isRunning;
+            timerElapsed = state.timer.elapsedSeconds;
+            timerStart = state.timer.startedAt;
+            updateTimerDisplay();
+        });
+
+        function setActivePlayer(player) {
+            activePlayerId = player;
+            updateActiveCard();
+        }
+
+        function updateActiveCard() {
+            if (activePlayerId === 1) {
+                document.getElementById('p1-card').classList.add('active');
+                document.getElementById('p2-card').classList.remove('active');
+            } else {
+                document.getElementById('p1-card').classList.remove('active');
+                document.getElementById('p2-card').classList.add('active');
+            }
+        }
+
+        // --- Game Actions ---
+        function addScore(points, isFreeBall) { socket.emit('action', { type: 'ADD_SCORE', player: activePlayerId, points: points, isFreeBall: isFreeBall }); }
+        function foul(points) { socket.emit('action', { type: 'FOUL', player: activePlayerId, points: points }); }
+        function customScore(player, points) { socket.emit('action', { type: 'CUSTOM_SCORE', player: player, points: points }); }
+        function updateName(player, name) { socket.emit('action', { type: 'SET_NAME', player: player, name: name }); }
+        function addFrame(player) { socket.emit('action', { type: 'ADD_FRAME', player: player }); }
+        function subFrame(player) { socket.emit('action', { type: 'SUB_FRAME', player: player }); }
+        function setMatchFormat(format) { socket.emit('action', { type: 'SET_MATCH_FORMAT', format: parseInt(format) }); }
+        function setMaxReds(reds) { socket.emit('action', { type: 'SET_MAX_REDS', reds: parseInt(reds) }); }
+        function setTheme(themeName) { socket.emit('action', { type: 'SET_THEME', theme: themeName }); }
+        function setGameMode(mode) { socket.emit('action', { type: 'SET_GAME_MODE', mode: mode }); }
+        function adjustReds(amount) { socket.emit('action', { type: 'ADJUST_REDS', amount: amount }); }
+        function undoAction() { socket.emit('action', { type: 'UNDO' }); }
+        
+        function newFrame() {
+            showConfirm("เริ่มเฟรมใหม่", "คะแนนบนโต๊ะจะถูกรีเซ็ตเป็น 0 และจำนวนลูกแดงจะถูกรีเซ็ต ยืนยันหรือไม่?", () => {
+                socket.emit('action', { type: 'RESET_FRAME' });
+            }, "#10b981");
+        }
+        function resetMatch() {
+            showConfirm("ล้างข้อมูลแมตช์", "คุณต้องการล้างข้อมูลแมตช์ใหม่ทั้งหมด (โดยไม่บันทึกสถิติลงประวัติ) ยืนยันหรือไม่?", () => {
+                socket.emit('action', { type: 'RESET_MATCH' });
+            }, "#ef4444");
+        }
+        function saveMatch() {
+            showConfirm("บันทึก & จบแมตช์", "ต้องการบันทึกสถิติแมตช์นี้ลงในประวัติการแข่งขัน และเริ่มแมตช์ใหม่ ใช่หรือไม่?", () => {
+                socket.emit('action', { type: 'SAVE_MATCH' });
+            }, "#eab308");
+        }
+        function swapPlayers() { socket.emit('action', { type: 'SWAP_PLAYERS' }); }
+
+        // --- Timer Actions ---
+        function toggleTimer() {
+            if (timerRunning) socket.emit('action', { type: 'TIMER_PAUSE' });
+            else socket.emit('action', { type: 'TIMER_START' });
+        }
+        function resetTimer() {
+            showConfirm("รีเซ็ตเวลา", "ต้องการรีเซ็ตเวลาที่จับกลับเป็น 00:00:00 ใช่หรือไม่?", () => {
+                socket.emit('action', { type: 'TIMER_RESET' });
+            }, "#ef4444");
+        }
+
+        // --- Roster Actions ---
+        function addRoster() {
+            const input = document.getElementById('new-player-name');
+            const name = input.value.trim();
+            if(name) {
+                socket.emit('action', { type: 'ADD_ROSTER', name: name });
+                input.value = '';
+            }
+        }
+        function delRoster(name) {
+            showConfirm("ลบรายชื่อ", `คุณต้องการลบชื่อ "${name}" ออกจากทะเบียนนักกีฬาถาวร ใช่หรือไม่?`, () => {
+                socket.emit('action', { type: 'DEL_ROSTER', name: name });
+            }, "#ef4444");
+        }
+    </script>
+</body>
+</html>
