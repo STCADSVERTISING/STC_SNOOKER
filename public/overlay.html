@@ -11,7 +11,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: transparent !important; /* OBS standard */
+            background: transparent !important;
             overflow: hidden;
             font-family: 'Roboto', sans-serif;
             color: white;
@@ -19,100 +19,142 @@
             align-items: flex-end;
             justify-content: center;
             height: 100vh;
-            padding-bottom: 30px; /* Distance from bottom */
+            padding-bottom: 30px;
         }
 
         .scoreboard-container {
             display: flex;
-            align-items: stretch;
+            align-items: flex-end;
             height: 56px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            border-radius: 4px;
-            overflow: hidden; /* Sharp corners like TV broadcast */
-            background: rgba(15, 23, 42, 0.95); /* Dark blue/gray base */
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transform: scale(1); /* Adjust this if they want it smaller/larger globally */
+            position: relative;
+            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.6));
         }
 
         .section {
             display: flex;
             align-items: center;
             justify-content: center;
+            height: 100%;
+            position: relative;
         }
 
-        /* Player Names */
-        .name-box {
+        /* --------------------------------------
+           SHAPES & LAYOUT (Slanted Design)
+           -------------------------------------- */
+        
+        /* P1 Side: Slant Right (/ /) */
+        .p1-frame-box {
+            clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
+            margin-right: -15px;
+            padding-right: 15px;
+            z-index: 1;
+            width: 60px;
+        }
+        
+        .p1-name { 
+            clip-path: polygon(15px 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
+            margin-right: -15px;
+            padding: 0 15px 0 30px;
+            z-index: 2;
             width: 250px;
+            justify-content: flex-end; 
+            text-align: right; 
+        }
+
+        .p1-score {
+            clip-path: polygon(15px 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
+            margin-right: -15px;
+            padding: 0 5px 0 20px;
+            z-index: 3;
+            width: 85px;
+        }
+
+        /* Center: Trapezoid (/ \) */
+        .center-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            height: 100%;
+            z-index: 4;
+        }
+        
+        .center-info {
+            clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 100%, 0 100%);
+            width: 150px;
+            flex-direction: column;
+            padding-top: 5px;
+        }
+
+        /* P2 Side: Slant Left (\ \) */
+        .p2-score {
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 100%, 15px 100%);
+            margin-left: -15px;
+            padding: 0 20px 0 5px;
+            z-index: 3;
+            width: 85px;
+        }
+
+        .p2-name { 
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 100%, 15px 100%);
+            margin-left: -15px;
+            padding: 0 30px 0 15px;
+            z-index: 2;
+            width: 250px;
+            justify-content: flex-start; 
+            text-align: left; 
+        }
+
+        .p2-frame-box {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 15px 100%);
+            margin-left: -15px;
+            padding-left: 15px;
+            z-index: 1;
+            width: 60px;
+        }
+
+
+        /* --------------------------------------
+           STYLES & COLORS
+           -------------------------------------- */
+        
+        .frame-box {
+            font-size: 24px;
+            font-weight: 900;
+            color: #fbbf24;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        .name-box {
             font-size: 22px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            padding: 0 20px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            position: relative;
-            background: linear-gradient(180deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);
+            background: linear-gradient(180deg, #334155 0%, #0f172a 100%);
         }
 
-        .p1-name { justify-content: flex-end; text-align: right; border-right: 1px solid rgba(0,0,0,0.5); }
-        .p2-name { justify-content: flex-start; text-align: left; border-left: 1px solid rgba(0,0,0,0.5); }
-
-        /* Break Indicator inside Name */
-        .break-text {
-            font-size: 14px;
-            font-weight: 900;
-            color: #fbbf24; /* Gold */
-            margin: 0 15px;
-            display: none;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-        
-        .active-p1 .p1-name .break-text { display: block; }
-        .active-p2 .p2-name .break-text { display: block; }
-
-        /* Frame Score */
-        .frame-box {
-            width: 50px;
-            background: #1e293b;
-            font-size: 24px;
-            font-weight: 900;
-            color: #fbbf24; /* Golden text for frames */
-            border-left: 1px solid rgba(255,255,255,0.05);
-            border-right: 1px solid rgba(255,255,255,0.05);
-        }
-
-        /* Points Score */
         .score-box {
-            width: 80px;
-            font-size: 38px;
+            font-size: 40px;
             font-weight: 900;
-            background: #0f172a;
+            background: linear-gradient(180deg, #020617 0%, #000000 100%);
             color: white;
             transition: all 0.3s;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            position: relative;
+            text-shadow: 0 3px 6px rgba(0,0,0,0.8);
         }
 
-        /* Active State Colors */
         .active-p1 .p1-score {
-            background: #2563eb; /* Bright Blue */
-            box-shadow: inset 0 0 15px rgba(255,255,255,0.2);
+            background: linear-gradient(180deg, #3b82f6 0%, #1e3a8a 100%);
         }
         .active-p2 .p2-score {
-            background: #dc2626; /* Bright Red */
-            box-shadow: inset 0 0 15px rgba(255,255,255,0.2);
+            background: linear-gradient(180deg, #ef4444 0%, #7f1d1d 100%);
         }
 
-        /* Center Match Info */
         .center-info {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 140px;
-            background: #000000;
-            padding: 0 10px;
+            background: linear-gradient(180deg, #000000 0%, #111111 100%);
         }
 
         .center-info .match-format {
@@ -125,13 +167,33 @@
         }
 
         .center-info .points-left {
-            font-size: 16px;
+            font-size: 15px;
             color: white;
             font-weight: 700;
         }
-        .center-info .points-left span { color: #10b981; } /* Green */
+        .center-info .points-left span { color: #10b981; }
 
-        /* Target Indicator (Small triangle pointing to active player) */
+        /* Break Indicator inside Name */
+        .break-text {
+            font-size: 14px;
+            font-weight: 900;
+            color: #fbbf24;
+            margin: 0 15px;
+            display: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.8; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.8; transform: scale(0.95); }
+        }
+
+        .active-p1 .p1-name .break-text { display: block; }
+        .active-p2 .p2-name .break-text { display: block; }
+
+        /* Target Indicator */
         .active-indicator {
             position: absolute;
             bottom: 0;
@@ -146,71 +208,82 @@
         /* Animation */
         .score-changed { animation: flash 0.4s ease-out; }
         @keyframes flash {
-            0% { background-color: white; color: black; }
-            100% { }
+            0% { filter: brightness(2); }
+            100% { filter: brightness(1); }
         }
 
         /* --------------------------------------
-           THEMES 
+           LOGO COMPONENT (Top Right)
            -------------------------------------- */
-
-        /* Theme 1: Default (Dark Navy) is handled by the default styles above */
-        
-        /* Theme 2: Glassmorphism (theme-glass) */
-        body.theme-glass .scoreboard-container {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        .top-right-logo {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 180px;
+            height: 180px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 4px solid #fbbf24;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            z-index: 100;
+            overflow: hidden;
         }
-        body.theme-glass .name-box { background: rgba(0, 0, 0, 0.4); border-color: rgba(255,255,255,0.2); }
-        body.theme-glass .frame-box { background: rgba(0, 0, 0, 0.5); border-color: rgba(255,255,255,0.2); }
-        body.theme-glass .center-info { background: rgba(255, 255, 255, 0.2); }
-        body.theme-glass .center-info .match-format { color: #1e293b; }
-        body.theme-glass .center-info .points-left { color: #1e293b; }
-        body.theme-glass .center-info .points-left span { color: #047857; font-weight: 900; }
-        body.theme-glass .score-box { background: rgba(0, 0, 0, 0.6); }
-
-        /* Theme 3: Classic Snooker Green (theme-green) */
-        body.theme-green .scoreboard-container { background: #064e3b; border: 2px solid #fbbf24; }
-        body.theme-green .name-box { background: linear-gradient(180deg, #065f46 0%, #064e3b 100%); }
-        body.theme-green .frame-box { background: #022c22; border-color: #fbbf24; }
-        body.theme-green .center-info { background: #022c22; }
-        body.theme-green .center-info .points-left span { color: #fbbf24; }
-        body.theme-green .score-box { background: #022c22; }
-        body.theme-green .active-p1 .p1-score { background: #15803d; border-right: 2px solid #fbbf24; }
-        body.theme-green .active-p2 .p2-score { background: #15803d; border-left: 2px solid #fbbf24; }
         
-        /* Theme 4: OLED True Black (theme-black) */
-        body.theme-black .scoreboard-container { background: #000000; border: 1px solid #333333; }
-        body.theme-black .name-box { background: #000000; border-color: #333333; }
-        body.theme-black .frame-box { background: #000000; border-color: #333333; }
-        body.theme-black .center-info { background: #000000; }
-        body.theme-black .score-box { background: #000000; border-left: 1px solid #333333; border-right: 1px solid #333333; }
+        .top-right-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+
+        /* --------------------------------------
+           THEMES (Updated for clip-path)
+           -------------------------------------- */
+        body.theme-glass .scoreboard-container { filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3)); }
+        body.theme-glass .name-box { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); }
+        body.theme-glass .frame-box { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); }
+        body.theme-glass .center-info { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px); }
+        body.theme-glass .center-info .match-format, body.theme-glass .center-info .points-left { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        body.theme-glass .score-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px); }
+
+        body.theme-green .name-box { background: linear-gradient(180deg, #065f46 0%, #064e3b 100%); }
+        body.theme-green .frame-box { background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); }
+        body.theme-green .center-info { background: linear-gradient(180deg, #022c22 0%, #000000 100%); }
+        body.theme-green .score-box { background: #022c22; }
+        body.theme-green .active-p1 .p1-score { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); }
+        body.theme-green .active-p2 .p2-score { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); }
+        
+        body.theme-black .name-box, body.theme-black .frame-box, body.theme-black .center-info, body.theme-black .score-box { 
+            background: #000000;
+        }
         body.theme-black .active-p1 .p1-score { background: #1d4ed8; }
         body.theme-black .active-p2 .p2-score { background: #b91c1c; }
 
-        /* Theme 5: Neon Cyberpunk (theme-neon) */
-        body.theme-neon .scoreboard-container { background: #120422; border: 1px solid #c026d3; box-shadow: 0 0 20px rgba(192, 38, 211, 0.4); }
-        body.theme-neon .name-box { background: #120422; border-color: #c026d3; }
-        body.theme-neon .frame-box { background: #120422; color: #22d3ee; border-color: #c026d3; }
-        body.theme-neon .center-info { background: #2e1065; }
+        body.theme-neon .scoreboard-container { filter: drop-shadow(0 0 15px rgba(192, 38, 211, 0.5)); }
+        body.theme-neon .name-box { background: #120422; }
+        body.theme-neon .frame-box { background: #120422; color: #22d3ee; }
+        body.theme-neon .center-info { background: linear-gradient(180deg, #2e1065 0%, #120422 100%); }
         body.theme-neon .center-info .points-left span { color: #22d3ee; }
         body.theme-neon .score-box { background: #2e1065; }
-        body.theme-neon .active-p1 .p1-score { background: #9333ea; box-shadow: 0 0 15px #9333ea; z-index: 10; }
-        body.theme-neon .active-p2 .p2-score { background: #db2777; box-shadow: 0 0 15px #db2777; z-index: 10; }
-        body.theme-neon .active-indicator { background: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
-        body.theme-neon .break-text { color: #22d3ee; }
+        body.theme-neon .active-p1 .p1-score { background: linear-gradient(180deg, #a855f7 0%, #7e22ce 100%); }
+        body.theme-neon .active-p2 .p2-score { background: linear-gradient(180deg, #ec4899 0%, #be185d 100%); }
+        body.theme-neon .top-right-logo { border-color: #c026d3; box-shadow: 0 0 20px rgba(192, 38, 211, 0.6); }
 
     </style>
 </head>
 <body>
 
+    <div class="top-right-logo" id="main-logo">
+        <img src="logo.png" alt="Logo" onerror="document.getElementById('main-logo').style.display='none'">
+    </div>
+
     <div class="scoreboard-container active-p1" id="overlay-main">
         
         <!-- Player 1 -->
-        <div class="section frame-box" id="p1-frame">0</div>
+        <div class="section frame-box p1-frame-box" id="p1-frame">0</div>
         <div class="section name-box p1-name">
             <div class="active-indicator"></div>
             <span class="break-text" id="p1-break">เบรก: 0</span>
@@ -219,9 +292,11 @@
         <div class="section score-box p1-score" id="p1-score">0</div>
 
         <!-- Center Match Info -->
-        <div class="section center-info">
-            <div class="match-format" id="match-format">แข่งใครถึง 3</div>
-            <div class="points-left">แต้มบนโต๊ะ: <span id="max-points">147</span></div>
+        <div class="center-wrapper">
+            <div class="section center-info">
+                <div class="match-format" id="match-format">แข่งใครถึง 3</div>
+                <div class="points-left">แต้มบนโต๊ะ: <span id="max-points">147</span></div>
+            </div>
         </div>
 
         <!-- Player 2 -->
@@ -231,7 +306,7 @@
             <span id="p2-name">ผู้เล่น 2</span>
             <span class="break-text" id="p2-break">เบรก: 0</span>
         </div>
-        <div class="section frame-box" id="p2-frame">0</div>
+        <div class="section frame-box p2-frame-box" id="p2-frame">0</div>
 
     </div>
 
