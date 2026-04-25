@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทะเบียนนักกีฬา (Player Database)</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { padding: 20px; font-family: 'Prompt', sans-serif; background: #0f172a; color: white; }
+        .glass { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .player-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            transition: 0.3s;
+        }
+        .player-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.05); border-color: #3b82f6; }
+        
+        .p-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fbbf24;
+            margin: 0 auto 15px auto;
+            display: block;
+        }
+
+        .p-name { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #e2e8f0; }
+
+        button { cursor: pointer; border: none; border-radius: 5px; padding: 8px 15px; font-weight: bold; color: white; transition: all 0.2s; }
+        .btn-primary { background: #3b82f6; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); width: 100%; }
+        .btn-danger:hover { background: #ef4444; color: white; }
+        .btn-success { background: #10b981; padding: 12px 20px; font-size: 16px; width: 100%; }
+
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        
+        .upload-btn { background: #475569; font-size: 14px; display: inline-block; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%; text-align: center; box-sizing: border-box; margin-top: 10px; }
+        input[type="file"] { display: none; }
+
+        #modal { display: none; position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: #1e293b; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header glass">
+        <h1><i class="fa-solid fa-address-book"></i> ทะเบียนรายชื่อนักกีฬา</h1>
+        <div>
+            <button class="btn-primary" onclick="openModal()"><i class="fa-solid fa-user-plus"></i> เพิ่มนักกีฬาใหม่</button>
+        </div>
+    </div>
+
+    <div class="glass">
+        <div class="players-grid" id="players-list">
+            <!-- JS Fills -->
+            <p style="text-align:center; color:#94a3b8; grid-column: 1/-1;">กำลังโหลดข้อมูล...</p>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0; color:#fbbf24; margin-bottom: 25px;">ลงทะเบียนนักกีฬา</h2>
+            
+            <img src="https://ui-avatars.com/api/?name=New&background=random" id="preview-photo" class="p-photo" style="width: 120px; height: 120px;">
+            <label class="upload-btn">
+                <i class="fa-solid fa-camera"></i> เลือกรูปภาพ
+                <input type="file" accept="image/*" onchange="handleUpload(this)">
+            </label>
+            <input type="hidden" id="photo-url">
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label>ชื่อนักกีฬา / ฉายา</label>
+                <input type="text" id="p-name" placeholder="เช่น ดิง จุนฮุย">
+            </div>
+
+            <div style="margin-top: 30px; display: flex; gap: 10px;">
+                <button class="btn-danger" style="flex:1;" onclick="closeModal()">ยกเลิก</button>
+                <button class="btn-success" style="flex:2;" onclick="savePlayer()"><i class="fa-solid fa-save"></i> บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+
+        async function loadPlayers() {
+            const res = await fetch('/api/players');
+            players = await res.json();
+            renderPlayers();
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-list');
+            container.innerHTML = '';
+            
+            if (players.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#94a3b8; grid-column: 1/-1; padding: 40px;">ยังไม่มีข้อมูลนักกีฬา กดปุ่ม "เพิ่มนักกีฬาใหม่" มุมขวาบนครับ</p>';
+                return;
+            }
+
+            players.forEach((p, index) => {
+                const imgUrl = p.photo || `https://ui-avatars.com/api/?name=${p.name}&background=random`;
+                container.innerHTML += `
+                    <div class="player-card">
+                        <img src="${imgUrl}" class="p-photo">
+                        <div class="p-name">${p.name}</div>
+                        <button class="btn-danger" onclick="deletePlayer(${index})"><i class="fa-solid fa-trash"></i> ลบข้อมูล</button>
+                    </div>
+                `;
+            });
+        }
+
+        function openModal() {
+            document.getElementById('p-name').value = '';
+            document.getElementById('photo-url').value = '';
+            document.getElementById('preview-photo').src = 'https://ui-avatars.com/api/?name=New&background=random';
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        async function handleUpload(fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result;
+                document.getElementById('preview-photo').src = base64; 
+
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: 'player_' + Date.now() + '.png',
+                        imageBase64: base64
+                    })
+                });
+                
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('photo-url').value = data.url;
+                } else {
+                    alert('อัปโหลดรูปล้มเหลว: ' + data.error);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function savePlayer() {
+            const name = document.getElementById('p-name').value.trim();
+            if(!name) return alert('กรุณากรอกชื่อนักกีฬาครับ');
+
+            const newPlayer = {
+                id: Date.now(),
+                name: name,
+                photo: document.getElementById('photo-url').value
+            };
+
+            players.push(newPlayer);
+            await fetch('/api/players', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(players)
+            });
+
+            closeModal();
+            renderPlayers();
+        }
+
+        async function deletePlayer(index) {
+            if(confirm('ต้องการลบข้อมูลนักกีฬาคนนี้ใช่หรือไม่?')) {
+                players.splice(index, 1);
+                await fetch('/api/players', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(players)
+                });
+                renderPlayers();
+            }
+        }
+
+        loadPlayers();
+    </script>
+</body>
+</html>

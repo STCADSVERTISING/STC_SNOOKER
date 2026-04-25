@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snooker Premium Overlay</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
 
@@ -272,12 +275,268 @@
         body.theme-neon .active-p2 .p2-score { background: linear-gradient(180deg, #ec4899 0%, #be185d 100%); }
         body.theme-neon .top-right-logo { border-color: #c026d3; box-shadow: 0 0 20px rgba(192, 38, 211, 0.6); }
 
+        /* --------------------------------------
+           SUMMARY SCREEN
+           -------------------------------------- */
+        #summary-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        #summary-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .summary-bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .summary-header {
+            text-align: center;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .summary-logo {
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid #fbbf24;
+            margin-bottom: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .summary-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .summary-match-name {
+            font-size: 38px;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .summary-round {
+            font-size: 26px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            margin-top: 5px;
+        }
+
+        .summary-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 30px;
+            width: 95%;
+            max-width: 1300px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            z-index: 2;
+        }
+
+        .summary-player {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .summary-photo-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            background: #fbbf24;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border: 5px solid white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+
+        .summary-photo-container.doubles {
+            width: 260px;
+            border-radius: 90px;
+        }
+
+        .summary-photo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .summary-photo-container.doubles img {
+            width: 50%;
+            height: 100%;
+        }
+
+        .summary-player-name {
+            width: 100%;
+            background: white;
+            color: black;
+            font-size: 30px;
+            font-weight: 900;
+            text-align: center;
+            padding: 12px 0;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
+        }
+
+        .summary-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-width: 160px;
+            padding-top: 55px; 
+        }
+
+        .summary-overall-score {
+            font-size: 72px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            margin-bottom: 40px;
+            letter-spacing: 5px;
+        }
+
+        .summary-frames {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sf-score {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 28px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+        .sf-score.winner {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: #10b981;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+        .sf-label {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-family: 'Outfit', sans-serif;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 <body>
 
     <div class="top-right-logo" id="main-logo">
         <img src="logo.png" alt="Logo" onerror="document.getElementById('main-logo').style.display='none'">
+    </div>
+
+    <!-- SUMMARY SCREEN OVERLAY -->
+    <div id="summary-screen">
+        <div class="summary-bg-pattern"></div>
+        <div class="summary-header">
+            <div class="summary-logo">
+                <img src="logo.png" alt="Logo" crossorigin="anonymous" onerror="this.style.display='none'">
+            </div>
+            <div class="summary-match-name" id="sum-match-name">การแข่งขัน มาดามสนุ๊กเกอร์ ครั้งที่ 3</div>
+            <div class="summary-round" id="sum-round">รอบชิงชนะเลิศ</div>
+        </div>
+
+        <div class="summary-content">
+            <!-- P1 Side -->
+            <div class="summary-player">
+                <div class="summary-photo-container" id="sum-p1-photo-box">
+                    <img src="p1.png" id="sum-p1-img" crossorigin="anonymous" onerror="this.src='https://ui-avatars.com/api/?name=P1&background=random'">
+                    <img src="p3.png" id="sum-p3-img" crossorigin="anonymous" style="display:none;" onerror="this.src='https://ui-avatars.com/api/?name=P3&background=random'">
+                </div>
+                <div class="summary-player-name" id="sum-p1-name">ผู้เล่น 1</div>
+                <div class="summary-frames" id="sum-p1-frames">
+                    <!-- JS fills -->
+                </div>
+            </div>
+
+            <!-- Center -->
+            <div class="summary-center">
+                <div class="summary-overall-score" id="sum-overall-score">0 - 0</div>
+                <div class="summary-frames" id="sum-center-labels">
+                    <!-- JS fills -->
+                </div>
+            </div>
+
+            <!-- P2 Side -->
+            <div class="summary-player">
+                <div class="summary-photo-container" id="sum-p2-photo-box">
+                    <img src="p2.png" id="sum-p2-img" crossorigin="anonymous" onerror="this.src='https://ui-avatars.com/api/?name=P2&background=random'">
+                    <img src="p4.png" id="sum-p4-img" crossorigin="anonymous" style="display:none;" onerror="this.src='https://ui-avatars.com/api/?name=P4&background=random'">
+                </div>
+                <div class="summary-player-name" id="sum-p2-name">ผู้เล่น 2</div>
+                <div class="summary-frames" id="sum-p2-frames">
+                    <!-- JS fills -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="scoreboard-container active-p1" id="overlay-main">
@@ -310,7 +569,6 @@
 
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         const overlay = document.getElementById('overlay-main');
@@ -366,6 +624,116 @@
                 overlay.classList.add('active-p1');
             } else {
                 overlay.classList.add('active-p2');
+            }
+
+            // --- SUMMARY SCREEN LOGIC ---
+            if(state.summary) {
+                const sumScreen = document.getElementById('summary-screen');
+                if(state.summary.show) {
+                    sumScreen.classList.add('show');
+                } else {
+                    sumScreen.classList.remove('show');
+                }
+
+                document.getElementById('sum-match-name').innerText = state.summary.matchName || 'การแข่งขัน มาดามสนุ๊กเกอร์';
+                document.getElementById('sum-round').innerText = state.summary.round || '-';
+                document.getElementById('sum-overall-score').innerText = `${state.player1.frame} - ${state.player2.frame}`;
+                
+                document.getElementById('sum-p1-name').innerText = state.player1.name;
+                document.getElementById('sum-p2-name').innerText = state.player2.name;
+
+                const p1Box = document.getElementById('sum-p1-photo-box');
+                const p2Box = document.getElementById('sum-p2-photo-box');
+                
+                document.getElementById('sum-p1-img').src = state.summary.p1Photo || 'https://ui-avatars.com/api/?name=P1&background=random';
+                document.getElementById('sum-p2-img').src = state.summary.p2Photo || 'https://ui-avatars.com/api/?name=P2&background=random';
+                
+                if(state.summary.isDoubles) {
+                    p1Box.classList.add('doubles');
+                    p2Box.classList.add('doubles');
+                    document.getElementById('sum-p3-img').style.display = 'block';
+                    document.getElementById('sum-p3-img').src = state.summary.p3Photo || 'https://ui-avatars.com/api/?name=P3&background=random';
+                    document.getElementById('sum-p4-img').style.display = 'block';
+                    document.getElementById('sum-p4-img').src = state.summary.p4Photo || 'https://ui-avatars.com/api/?name=P4&background=random';
+                } else {
+                    p1Box.classList.remove('doubles');
+                    p2Box.classList.remove('doubles');
+                    document.getElementById('sum-p3-img').style.display = 'none';
+                    document.getElementById('sum-p4-img').style.display = 'none';
+                }
+
+                // Render Frame Rows
+                const p1FramesEl = document.getElementById('sum-p1-frames');
+                const p2FramesEl = document.getElementById('sum-p2-frames');
+                const labelsEl = document.getElementById('sum-center-labels');
+                
+                p1FramesEl.innerHTML = '';
+                p2FramesEl.innerHTML = '';
+                labelsEl.innerHTML = '';
+
+                // Calculate number of rows to show
+                // Minimum 3 rows, or current frames played + 1
+                const actualRows = Math.max(state.frames.length + 1, 3);
+
+                for(let i=0; i<actualRows; i++) {
+                    const frameData = state.frames[i];
+                    
+                    let p1Score = '-';
+                    let p2Score = '-';
+                    let winner = null;
+
+                    if (frameData) {
+                        p1Score = frameData.p1Score;
+                        p2Score = frameData.p2Score;
+                        winner = frameData.winner;
+                    } else if (i === state.frames.length) {
+                        // Current active frame
+                        p1Score = state.player1.score;
+                        p2Score = state.player2.score;
+                    }
+
+                    const p1Div = document.createElement('div');
+                    p1Div.className = `sf-score ${winner === 1 ? 'winner' : ''}`;
+                    p1Div.innerText = p1Score;
+                    p1FramesEl.appendChild(p1Div);
+
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'sf-label';
+                    labelDiv.innerText = `เฟรม ${i+1}`;
+                    if (i === state.frames.length) {
+                        labelDiv.style.border = '1px solid #fbbf24';
+                        labelDiv.style.background = 'rgba(251, 191, 36, 0.2)';
+                        labelDiv.style.color = '#fbbf24';
+                    }
+                    labelsEl.appendChild(labelDiv);
+
+                    const p2Div = document.createElement('div');
+                    p2Div.className = `sf-score ${winner === 2 ? 'winner' : ''}`;
+                    p2Div.innerText = p2Score;
+                    p2FramesEl.appendChild(p2Div);
+                }
+            }
+        });
+
+        socket.on('TAKE_SCREENSHOT', async () => {
+            const el = document.getElementById('summary-screen');
+            if (!el.classList.contains('show')) {
+                console.log("Screenshot requested but screen is hidden.");
+                return;
+            }
+            try {
+                await new Promise(r => setTimeout(r, 300));
+                
+                const canvas = await html2canvas(el, { 
+                    backgroundColor: '#0f172a',
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+                const base64 = canvas.toDataURL('image/png');
+                socket.emit('SCREENSHOT_DATA', base64);
+            } catch(e) {
+                console.error("Screenshot error:", e);
             }
         });
     </script>

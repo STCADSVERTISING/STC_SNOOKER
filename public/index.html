@@ -36,6 +36,12 @@
                     <option value="theme-black">🎨 ธีม 4: ดำสนิท (OLED)</option>
                     <option value="theme-neon">🎨 ธีม 5: นีออน (Cyberpunk)</option>
                 </select>
+                <a href="players.html" target="_blank" style="background: #10b981; color: white; padding: 5px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                    <i class="fa-solid fa-address-book"></i> ทะเบียนนักกีฬา
+                </a>
+                <a href="matches.html" target="_blank" style="background: #8b5cf6; color: white; padding: 5px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                    <i class="fa-solid fa-list"></i> ตั้งค่าตารางแข่ง
+                </a>
                 <a href="history.html" target="_blank" style="background: #3b82f6; color: white; padding: 5px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
                     <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการแข่งขัน
                 </a>
@@ -51,6 +57,32 @@
             </div>
             <div class="roster-list" id="roster-list">
                 <!-- Javascript will populate this -->
+            </div>
+        </div>
+
+        <!-- Summary Screen Controls -->
+        <div class="glass extra-section">
+            <div class="section-title" style="text-align: left; display:flex; justify-content:space-between;">
+                <span><i class="fa-solid fa-tv"></i> ดึงข้อมูลการแข่งขัน (เตรียมรูปและรายชื่อไว้ก่อน)</span>
+                <a href="matches.html" target="_blank" style="color: #3b82f6; font-size: 14px; text-decoration: none;"><i class="fa-solid fa-plus"></i> ไปหน้าจัดการข้อมูลแข่ง</a>
+            </div>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <select id="match-selector" style="flex: 3; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 5px;">
+                    <option value="">-- เลือกแมตช์ที่ตั้งค่าไว้แล้ว --</option>
+                </select>
+                <button class="action-btn" style="flex: 1; background: #eab308; color: black; font-weight: bold;" onclick="loadSelectedMatch()">
+                    <i class="fa-solid fa-download"></i> ดึงรายชื่อขึ้นจอ
+                </button>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="btn-toggle-summary" class="action-btn" style="flex: 2; background: #3b82f6; font-size: 16px; padding: 10px;" onclick="toggleSummary()">
+                    <i class="fa-solid fa-eye"></i> โชว์หน้าสรุปผล (SHOW)
+                </button>
+                <button class="action-btn" style="flex: 1; background: #10b981; font-size: 14px; padding: 10px; color: white;" onclick="takeScreenshot()">
+                    <i class="fa-solid fa-camera"></i> เซฟรูปภาพ
+                </button>
             </div>
         </div>
 
@@ -355,6 +387,20 @@
             timerElapsed = state.timer.elapsedSeconds;
             timerStart = state.timer.startedAt;
             updateTimerDisplay();
+
+            // Update Summary UI
+            if(state.summary) {
+                const btnSummary = document.getElementById('btn-toggle-summary');
+                if (state.summary.show) {
+                    btnSummary.innerHTML = '<i class="fa-solid fa-eye-slash"></i> ซ่อนหน้าสรุปผล (HIDE)';
+                    btnSummary.style.background = '#ef4444';
+                    btnSummary.classList.add('showing');
+                } else {
+                    btnSummary.innerHTML = '<i class="fa-solid fa-eye"></i> โชว์หน้าสรุปผลการแข่งขัน (SHOW)';
+                    btnSummary.style.background = '#3b82f6';
+                    btnSummary.classList.remove('showing');
+                }
+            }
         });
 
         function setActivePlayer(player) {
@@ -428,6 +474,74 @@
                 socket.emit('action', { type: 'DEL_ROSTER', name: name });
             }, "#ef4444");
         }
+
+        // --- Summary & Match Loading ---
+        let availableMatches = [];
+        
+        async function fetchMatches() {
+            const res = await fetch('/api/matches');
+            availableMatches = await res.json();
+            const selector = document.getElementById('match-selector');
+            selector.innerHTML = '<option value="">-- เลือกแมตช์ที่ตั้งค่าไว้แล้ว --</option>';
+            availableMatches.forEach((m, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = `[${m.type === 'doubles' ? 'คู่' : 'เดี่ยว'}] ${m.name} - ${m.round} (${m.p1Name} VS ${m.p2Name})`;
+                selector.appendChild(opt);
+            });
+        }
+        
+        // Call it initially
+        fetchMatches();
+
+        function loadSelectedMatch() {
+            const idx = document.getElementById('match-selector').value;
+            if(idx === '') return alert('กรุณาเลือกแมตช์ก่อนครับ');
+            
+            const m = availableMatches[idx];
+            const isDoubles = m.type === 'doubles';
+            
+            // Set Player Names on Scoreboard
+            const t1Name = isDoubles ? `${m.p1Name} & ${m.p3Name}` : m.p1Name;
+            const t2Name = isDoubles ? `${m.p2Name} & ${m.p4Name}` : m.p2Name;
+            
+            updateName(1, t1Name);
+            updateName(2, t2Name);
+            
+            // Send Data to Summary State
+            const summaryData = {
+                matchName: m.name,
+                round: m.round,
+                isDoubles: isDoubles,
+                p1Photo: m.p1Photo,
+                p2Photo: m.p2Photo,
+                p3Photo: m.p3Photo,
+                p4Photo: m.p4Photo
+            };
+            socket.emit('action', { type: 'UPDATE_SUMMARY', data: summaryData });
+            
+            alert('ดึงข้อมูลแมตช์เรียบร้อยแล้ว!');
+        }
+
+        function toggleSummary() {
+            const btn = document.getElementById('btn-toggle-summary');
+            const isShowing = btn.classList.contains('showing');
+            socket.emit('action', { type: 'TOGGLE_SUMMARY', show: !isShowing });
+        }
+
+        function takeScreenshot() {
+            socket.emit('action', { type: 'REQ_SCREENSHOT' });
+            alert('กำลังแคปรูปภาพจากหน้าจอ Overlay... กรุณารอสักครู่รูปภาพจะถูกดาวน์โหลดอัตโนมัติครับ');
+        }
+
+        socket.on('SCREENSHOT_READY', (base64) => {
+            const a = document.createElement('a');
+            a.href = base64;
+            a.download = `Match_Summary_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
     </script>
 </body>
 </html>
