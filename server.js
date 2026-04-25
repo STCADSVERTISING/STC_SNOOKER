@@ -6,11 +6,12 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 1e8 }); // Allow large base64 strings
 
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json({ limit: '50mb' }));
 
 const dataDir = path.join(__dirname, 'data');
 const historyFile = path.join(dataDir, 'history.json');
@@ -22,6 +23,46 @@ if (!fs.existsSync(rosterFile)) fs.writeFileSync(rosterFile, JSON.stringify(['Jo
 
 let matchHistory = JSON.parse(fs.readFileSync(historyFile));
 let playersRoster = JSON.parse(fs.readFileSync(rosterFile));
+
+const matchesFile = path.join(dataDir, 'matches.json');
+if (!fs.existsSync(matchesFile)) fs.writeFileSync(matchesFile, JSON.stringify([]));
+
+const playersFile = path.join(dataDir, 'players.json');
+if (!fs.existsSync(playersFile)) fs.writeFileSync(playersFile, JSON.stringify([]));
+
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// REST APIs for Match Setup
+app.get('/api/matches', (req, res) => {
+    res.json(JSON.parse(fs.readFileSync(matchesFile)));
+});
+
+app.post('/api/matches', (req, res) => {
+    fs.writeFileSync(matchesFile, JSON.stringify(req.body, null, 2));
+    res.json({ success: true });
+});
+
+app.get('/api/players', (req, res) => {
+    res.json(JSON.parse(fs.readFileSync(playersFile)));
+});
+
+app.post('/api/players', (req, res) => {
+    fs.writeFileSync(playersFile, JSON.stringify(req.body, null, 2));
+    res.json({ success: true });
+});
+
+app.post('/api/upload', (req, res) => {
+    try {
+        const { filename, imageBase64 } = req.body;
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, base64Data, 'base64');
+        res.json({ success: true, url: 'uploads/' + filename });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 let gameState = {
   player1: { name: 'ผู้เล่น 1', score: 0, frame: 0 },
@@ -42,6 +83,16 @@ let gameState = {
     p2HighestBreak: 0,
     p1TotalPoints: 0,
     p2TotalPoints: 0
+  },
+  summary: {
+    show: false,
+    matchName: 'การแข่งขัน มาดามสนุ๊กเกอร์ ครั้งที่ 3',
+    round: 'รอบ 8 คนสุดท้าย',
+    isDoubles: false,
+    p1Photo: 'p1.png',
+    p2Photo: 'p2.png',
+    p3Photo: 'p3.png',
+    p4Photo: 'p4.png'
   }
 };
 
@@ -50,8 +101,16 @@ io.on('connection', (socket) => {
   socket.emit('updateHistory', matchHistory);
 
   socket.on('action', (action) => {
+    if (action.type === 'REQ_SCREENSHOT') {
+      io.emit('TAKE_SCREENSHOT');
+      return;
+    }
     processAction(action);
     io.emit('updateState', gameState);
+  });
+  
+  socket.on('SCREENSHOT_DATA', (data) => {
+    io.emit('SCREENSHOT_READY', data);
   });
   
   socket.on('requestHistory', () => {
@@ -69,7 +128,8 @@ function processAction(action) {
       currentBreak: gameState.currentBreak,
       redsLeft: gameState.redsLeft,
       stats: gameState.stats,
-      frames: gameState.frames
+      frames: gameState.frames,
+      summary: gameState.summary
     }));
     gameState.history.push(stateCopy);
     if (gameState.history.length > 50) gameState.history.shift();
@@ -187,6 +247,13 @@ function processAction(action) {
       gameState.gameMode = action.mode;
       break;
 
+    case 'UPDATE_SUMMARY':
+      gameState.summary = { ...gameState.summary, ...action.data };
+      break;
+    case 'TOGGLE_SUMMARY':
+      gameState.summary.show = action.show;
+      break;
+
     case 'RESET_FRAME': resetTable(); break;
     case 'RESET_MATCH':
       gameState.player1.frame = 0;
@@ -217,6 +284,12 @@ function processAction(action) {
       gameState.stats = { p1HighestBreak: 0, p2HighestBreak: 0, p1TotalPoints: 0, p2TotalPoints: 0 };
       gameState.frames = [];
       resetTable();
+      break;
+
+    case 'DELETE_HISTORY':
+      matchHistory = matchHistory.filter(record => record.id !== action.id);
+      fs.writeFileSync(historyFile, JSON.stringify(matchHistory, null, 2));
+      io.emit('updateHistory', matchHistory);
       break;
 
     case 'SWAP_PLAYERS':
