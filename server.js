@@ -16,10 +16,12 @@ app.use(express.json({ limit: '50mb' }));
 const dataDir = path.join(__dirname, 'data');
 const historyFile = path.join(dataDir, 'history.json');
 const rosterFile = path.join(dataDir, 'roster.json');
+const matchInfoFile = path.join(dataDir, 'matchinfo.json');
 
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 if (!fs.existsSync(historyFile)) fs.writeFileSync(historyFile, JSON.stringify([]));
 if (!fs.existsSync(rosterFile)) fs.writeFileSync(rosterFile, JSON.stringify(['John Doe', 'Jane Smith', 'Ronnie', 'Judd']));
+if (!fs.existsSync(matchInfoFile)) fs.writeFileSync(matchInfoFile, JSON.stringify({ name: 'STC SNOOKER SCORE', round: '' }));
 
 let matchHistory = JSON.parse(fs.readFileSync(historyFile));
 let playersRoster = JSON.parse(fs.readFileSync(rosterFile));
@@ -74,6 +76,8 @@ let gameState = {
   matchFormat: 3,
   gameMode: 'snooker',
   theme: 'theme-default',
+  handicap: { p1: 0, p2: 0 },
+  matchInfo: JSON.parse(fs.readFileSync(matchInfoFile)),
   timer: { isRunning: false, startedAt: null, elapsedSeconds: 0 },
   history: [],
   frames: [], // Stores individual frame scores
@@ -119,7 +123,7 @@ io.on('connection', (socket) => {
 });
 
 function processAction(action) {
-  const skipHistory = ['UNDO', 'SET_NAME', 'SET_MATCH_FORMAT', 'SET_MAX_REDS', 'TIMER_START', 'TIMER_PAUSE', 'TIMER_RESET', 'ADD_ROSTER', 'DEL_ROSTER', 'SAVE_MATCH', 'SET_THEME'];
+  const skipHistory = ['UNDO', 'SET_NAME', 'SET_MATCH_FORMAT', 'SET_MAX_REDS', 'TIMER_START', 'TIMER_PAUSE', 'TIMER_RESET', 'ADD_ROSTER', 'DEL_ROSTER', 'SAVE_MATCH', 'SET_THEME', 'SET_HANDICAP', 'SET_MATCH_INFO'];
   if (!skipHistory.includes(action.type)) {
     const stateCopy = JSON.parse(JSON.stringify({
       player1: gameState.player1,
@@ -245,6 +249,19 @@ function processAction(action) {
 
     case 'SET_GAME_MODE':
       gameState.gameMode = action.mode;
+      break;
+
+    case 'SET_HANDICAP':
+      if (action.player === 1) gameState.handicap.p1 = action.value;
+      if (action.player === 2) gameState.handicap.p2 = action.value;
+      break;
+
+    case 'SET_MATCH_INFO':
+      gameState.matchInfo = { ...gameState.matchInfo, ...action.data };
+      // Sync to summary screen too
+      if (action.data.name) gameState.summary.matchName = action.data.name;
+      if (action.data.round) gameState.summary.round = action.data.round;
+      fs.writeFileSync(matchInfoFile, JSON.stringify(gameState.matchInfo, null, 2));
       break;
 
     case 'UPDATE_SUMMARY':
