@@ -60,6 +60,26 @@
             </div>
         </div>
 
+        <!-- Match Info Settings -->
+        <div class="glass extra-section">
+            <div class="section-title" style="text-align: left;"><i class="fa-solid fa-trophy"></i> ตั้งค่าชื่อรายการ & รอบ (แสดงบน Overlay)</div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                <div style="flex: 2; display:flex; flex-direction:column; gap:4px;">
+                    <label style="font-size:12px; color:#94a3b8;">ชื่อรายการแข่งขัน</label>
+                    <input type="text" id="match-info-name" placeholder="เช่น PREMIUM 6 RED OPEN HANDICAP 2026" style="background:rgba(0,0,0,.5); color:#fbbf24; border:1px solid rgba(251,191,36,.3); padding:10px; border-radius:5px; font-size:14px; font-weight:bold;">
+                </div>
+                <div style="flex: 1; display:flex; flex-direction:column; gap:4px;">
+                    <label style="font-size:12px; color:#94a3b8;">รอบการแข่งขัน</label>
+                    <input type="text" id="match-info-round" placeholder="เช่น รอบแรก, รอบชิง" style="background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(255,255,255,.2); padding:10px; border-radius:5px; font-size:14px;">
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <button class="action-btn" style="background:#eab308; color:black; font-weight:bold; padding:10px 20px;" onclick="saveMatchInfo()">
+                        <i class="fa-solid fa-save"></i> บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Summary Screen Controls -->
         <div class="glass extra-section">
             <div class="section-title" style="text-align: left; display:flex; justify-content:space-between;">
@@ -102,6 +122,10 @@
                     <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(1, 1)">+1 แต้มต่อ</button>
                     <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(1, -1)">-1</button>
                 </div>
+                <div style="margin-top:8px; display:flex; align-items:center; gap:5px;" onclick="event.stopPropagation()">
+                    <label style="font-size:12px; color:#fbbf24;">แต้มต่อ Overlay:</label>
+                    <input type="number" id="p1-handicap" value="0" min="0" max="99" style="width:55px; background:rgba(0,0,0,.5); color:#fbbf24; border:1px solid rgba(251,191,36,.4); border-radius:5px; padding:4px; text-align:center; font-weight:bold;" onchange="setHandicap(1, this.value)">
+                </div>
             </div>
 
             <div class="center-col">
@@ -133,6 +157,10 @@
                 <div style="margin-top: 15px; display: flex; gap: 5px;">
                     <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(2, 1)">+1 แต้มต่อ</button>
                     <button class="action-btn handicap" onclick="event.stopPropagation(); customScore(2, -1)">-1</button>
+                </div>
+                <div style="margin-top:8px; display:flex; align-items:center; gap:5px;" onclick="event.stopPropagation()">
+                    <label style="font-size:12px; color:#fbbf24;">แต้มต่อ Overlay:</label>
+                    <input type="number" id="p2-handicap" value="0" min="0" max="99" style="width:55px; background:rgba(0,0,0,.5); color:#fbbf24; border:1px solid rgba(251,191,36,.4); border-radius:5px; padding:4px; text-align:center; font-weight:bold;" onchange="setHandicap(2, this.value)">
                 </div>
             </div>
         </div>
@@ -362,6 +390,20 @@
             document.getElementById('stat-p2-break').innerText = state.stats.p2HighestBreak;
             document.getElementById('stat-p2-total').innerText = state.stats.p2TotalPoints;
 
+            // Sync handicap inputs
+            if (state.handicap) {
+                document.getElementById('p1-handicap').value = state.handicap.p1 || 0;
+                document.getElementById('p2-handicap').value = state.handicap.p2 || 0;
+            }
+
+            // Sync match info inputs
+            if (state.matchInfo) {
+                const nameInput = document.getElementById('match-info-name');
+                const roundInput = document.getElementById('match-info-round');
+                if (nameInput && !nameInput.matches(':focus')) nameInput.value = state.matchInfo.name || '';
+                if (roundInput && !roundInput.matches(':focus')) roundInput.value = state.matchInfo.round || '';
+            }
+
             // Update Roster
             const rosterContainer = document.getElementById('roster-list');
             rosterContainer.innerHTML = '';
@@ -430,6 +472,13 @@
         function setTheme(themeName) { socket.emit('action', { type: 'SET_THEME', theme: themeName }); }
         function setGameMode(mode) { socket.emit('action', { type: 'SET_GAME_MODE', mode: mode }); }
         function adjustReds(amount) { socket.emit('action', { type: 'ADJUST_REDS', amount: amount }); }
+        function setHandicap(player, value) { socket.emit('action', { type: 'SET_HANDICAP', player: player, value: parseInt(value) || 0 }); }
+        function saveMatchInfo() {
+            const name = document.getElementById('match-info-name').value.trim();
+            const round = document.getElementById('match-info-round').value.trim();
+            socket.emit('action', { type: 'SET_MATCH_INFO', data: { name: name || 'STC SNOOKER SCORE', round: round } });
+            alert('บันทึกชื่อรายการเรียบร้อย!');
+        }
         function undoAction() { socket.emit('action', { type: 'UNDO' }); }
         
         function newFrame() {

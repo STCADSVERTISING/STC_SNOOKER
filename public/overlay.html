@@ -1,740 +1,269 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snooker Premium Overlay</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Snooker Overlay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:transparent!important;overflow:hidden;font-family:'Prompt',sans-serif;color:#fff;height:100vh;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:18px}
 
-        body {
-            margin: 0;
-            padding: 0;
-            background: transparent !important;
-            overflow: hidden;
-            font-family: 'Roboto', sans-serif;
-            color: white;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            height: 100vh;
-            padding-bottom: 30px;
-        }
+        .overlay-wrap{display:flex;flex-direction:column;align-items:center;width:94%;max-width:1000px}
 
-        .scoreboard-container {
-            display: flex;
-            align-items: flex-end;
-            height: 56px;
-            position: relative;
-            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.6));
-        }
+        /* ===== MATCH BANNER ===== */
+        .match-banner{display:flex;align-items:center;justify-content:center;gap:12px;width:65%;padding:7px 28px;border-radius:30px 30px 0 0;background:linear-gradient(180deg,#2a2000 0%,#1a1400 100%);border:2px solid;border-bottom:none;border-image:linear-gradient(90deg,transparent,#d4a520,#f5d77a,#d4a520,transparent) 1;position:relative;z-index:2;box-shadow:0 -4px 20px rgba(212,165,32,.3)}
+        .match-banner .b-logo{width:30px;height:30px;border-radius:50%;object-fit:contain;background:#fff;flex-shrink:0;box-shadow:0 0 8px rgba(212,165,32,.5)}
+        .match-banner .b-text{font-size:14px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;background:linear-gradient(90deg,#f5d77a,#fff6d5,#d4a520);-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;text-shadow:none;filter:drop-shadow(0 0 6px rgba(245,215,122,.4))}
 
-        .section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            position: relative;
-        }
+        /* ===== MAIN SCOREBOARD ===== */
+        .scoreboard{display:flex;align-items:stretch;width:100%;min-height:76px;border-radius:16px;overflow:visible;position:relative;background:linear-gradient(180deg,#1c1c1c 0%,#0a0a0a 100%);border:2px solid #b8860b;box-shadow:0 0 25px rgba(184,134,11,.35),0 0 60px rgba(184,134,11,.12),inset 0 1px 0 rgba(255,255,255,.06)}
 
-        /* --------------------------------------
-           SHAPES & LAYOUT (Slanted Design)
-           -------------------------------------- */
+        /* Player sections */
+        .p-sec{display:flex;align-items:center;flex:1;padding:8px 20px;gap:12px;transition:all .3s}
+        .p1-sec{justify-content:flex-start;border-radius:14px 0 0 14px}
+        .p2-sec{justify-content:flex-end;border-radius:0 14px 14px 0}
+        .p-info{display:flex;flex-direction:column;min-width:0;flex:1}
+        .p1-sec .p-info{text-align:left}
+        .p2-sec .p-info{text-align:right;align-items:flex-end}
+        .p-info .pn{font-size:22px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+        .p-info .hc{font-size:14px;color:#f5d77a;font-weight:700;line-height:1.1;text-shadow:0 0 8px rgba(245,215,122,.4)}
+
+        /* Score boxes */
+        .sc{display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:900;min-width:80px;padding:4px 16px;background:linear-gradient(180deg,#222 0%,#111 100%);text-shadow:0 3px 10px rgba(0,0,0,.9);transition:all .4s;flex-shrink:0;border:1px solid rgba(184,134,11,.3)}
+        .p1-sec .sc{border-radius:0 12px 12px 0;order:2}
+        .p2-sec .sc{border-radius:12px 0 0 12px}
+
+        /* Active states */
+        .active-p1 .p1-sec{background:linear-gradient(90deg,rgba(37,99,235,.18),transparent)}
+        .active-p1 .p1-sec .sc{background:linear-gradient(180deg,#2563eb,#1d4ed8);box-shadow:0 0 25px rgba(37,99,235,.5),0 0 50px rgba(37,99,235,.2);border-color:#3b82f6}
+        .active-p2 .p2-sec{background:linear-gradient(270deg,rgba(220,38,38,.18),transparent)}
+        .active-p2 .p2-sec .sc{background:linear-gradient(180deg,#dc2626,#991b1b);box-shadow:0 0 25px rgba(220,38,38,.5),0 0 50px rgba(220,38,38,.2);border-color:#ef4444}
+
+        /* Center */
+        .c-sec{display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 16px;background:linear-gradient(180deg,#111 0%,#000 100%);min-width:145px;flex-shrink:0;position:relative;border-left:1px solid rgba(184,134,11,.25);border-right:1px solid rgba(184,134,11,.25)}
+        .fn{font-size:30px;font-weight:900;min-width:32px;text-align:center;text-shadow:0 0 10px rgba(255,255,255,.2)}
+        .c-mid{display:flex;flex-direction:column;align-items:center;gap:2px}
+        .c-mid .c-time{font-size:12px;color:#94a3b8;font-weight:600}
+        .c-mid .c-balls{font-size:13px;color:#10b981;font-weight:700;text-shadow:0 0 6px rgba(16,185,129,.4)}
         
-        /* P1 Side: Slant Right (/ /) */
-        .p1-frame-box {
-            clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
-            margin-right: -15px;
-            padding-right: 15px;
-            z-index: 1;
-            width: 60px;
-        }
-        
-        .p1-name { 
-            clip-path: polygon(15px 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
-            margin-right: -15px;
-            padding: 0 15px 0 30px;
-            z-index: 2;
-            width: 250px;
-            justify-content: flex-end; 
-            text-align: right; 
-        }
+        /* Arrows */
+        .arr{width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;flex-shrink:0;filter:drop-shadow(0 0 4px rgba(34,197,94,.6))}
+        .arr-l{border-right:13px solid #22c55e;display:none}
+        .arr-r{border-left:13px solid #22c55e;display:none}
+        .active-p1 .arr-l{display:block}
+        .active-p2 .arr-r{display:block}
 
-        .p1-score {
-            clip-path: polygon(15px 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
-            margin-right: -15px;
-            padding: 0 5px 0 20px;
-            z-index: 3;
-            width: 85px;
-        }
+        /* Break display */
+        .brk{position:absolute;top:-34px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2a2000,#1a1400);padding:4px 20px;border-radius:14px;font-size:14px;font-weight:700;color:#f5d77a;white-space:nowrap;display:none;border:1px solid #b8860b;box-shadow:0 0 15px rgba(184,134,11,.4)}
+        .brk.show{display:block;animation:pulse 1.5s infinite}
+        @keyframes pulse{0%,100%{opacity:.85;transform:translateX(-50%) scale(.97)}50%{opacity:1;transform:translateX(-50%) scale(1.03)}}
 
-        /* Center: Trapezoid (/ \) */
-        .center-wrapper {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            align-items: center;
-            height: 100%;
-            z-index: 4;
-        }
-        
-        .center-info {
-            clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 100%, 0 100%);
-            width: 150px;
-            flex-direction: column;
-            padding-top: 5px;
-        }
+        /* ===== ROUND BAR ===== */
+        .round-bar{display:flex;align-items:center;justify-content:center;width:35%;padding:5px 30px;border-radius:0 0 16px 16px;background:linear-gradient(180deg,#b91c1c,#991b1b);position:relative;z-index:2;border:1px solid;border-top:none;border-image:linear-gradient(90deg,transparent,#ef4444,transparent) 1;box-shadow:0 4px 15px rgba(185,28,28,.4)}
+        .round-bar span{font-size:15px;font-weight:700;letter-spacing:1.5px;text-shadow:0 2px 4px rgba(0,0,0,.7)}
 
-        /* P2 Side: Slant Left (\ \) */
-        .p2-score {
-            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 100%, 15px 100%);
-            margin-left: -15px;
-            padding: 0 20px 0 5px;
-            z-index: 3;
-            width: 85px;
-        }
+        /* ===== LOGO ===== */
+        .top-right-logo{position:absolute;top:30px;right:30px;width:160px;height:160px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;border:4px solid #d4a520;box-shadow:0 0 25px rgba(212,165,32,.4),0 8px 30px rgba(0,0,0,.6);z-index:100;overflow:hidden}
+        .top-right-logo img{width:100%;height:100%;object-fit:contain}
 
-        .p2-name { 
-            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 100%, 15px 100%);
-            margin-left: -15px;
-            padding: 0 30px 0 15px;
-            z-index: 2;
-            width: 250px;
-            justify-content: flex-start; 
-            text-align: left; 
-        }
+        .score-changed{animation:flash .4s ease-out}
+        @keyframes flash{0%{filter:brightness(2.5)}100%{filter:brightness(1)}}
 
-        .p2-frame-box {
-            clip-path: polygon(0 0, 100% 0, 100% 100%, 15px 100%);
-            margin-left: -15px;
-            padding-left: 15px;
-            z-index: 1;
-            width: 60px;
-        }
+        /* ===== THEMES ===== */
+        body.theme-glass .scoreboard{background:rgba(0,0,0,.35);backdrop-filter:blur(18px);border-color:rgba(212,165,32,.4);box-shadow:0 0 30px rgba(212,165,32,.2)}
+        body.theme-glass .match-banner{background:rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+        body.theme-green .scoreboard{background:linear-gradient(180deg,rgba(6,78,59,.94),rgba(2,44,34,.97));border-color:#16a34a;box-shadow:0 0 25px rgba(22,163,74,.3)}
+        body.theme-green .match-banner{background:linear-gradient(90deg,rgba(2,44,34,.95),rgba(6,78,59,.95),rgba(2,44,34,.95))}
+        body.theme-green .active-p1 .p1-sec .sc{background:linear-gradient(180deg,#16a34a,#15803d);box-shadow:0 0 25px rgba(22,163,74,.5);border-color:#22c55e}
+        body.theme-green .active-p2 .p2-sec .sc{background:linear-gradient(180deg,#16a34a,#15803d);box-shadow:0 0 25px rgba(22,163,74,.5);border-color:#22c55e}
+        body.theme-black .scoreboard{background:rgba(0,0,0,.98);border-color:#b8860b;box-shadow:0 0 20px rgba(184,134,11,.25)}
+        body.theme-black .match-banner{background:#000}
+        body.theme-neon .scoreboard{background:rgba(18,4,34,.95);border-color:#c026d3;box-shadow:0 0 30px rgba(192,38,211,.35)}
+        body.theme-neon .match-banner{background:linear-gradient(90deg,#120422,#2e1065,#120422);border-image:linear-gradient(90deg,transparent,#c026d3,#e879f9,#c026d3,transparent) 1}
+        body.theme-neon .match-banner .b-text{background:linear-gradient(90deg,#22d3ee,#e879f9,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        body.theme-neon .active-p1 .p1-sec .sc{background:linear-gradient(180deg,#a855f7,#7e22ce);box-shadow:0 0 25px rgba(168,85,247,.5);border-color:#c084fc}
+        body.theme-neon .active-p2 .p2-sec .sc{background:linear-gradient(180deg,#ec4899,#be185d);box-shadow:0 0 25px rgba(236,72,153,.5);border-color:#f472b6}
+        body.theme-neon .round-bar{background:linear-gradient(180deg,#7e22ce,#6b21a8);box-shadow:0 4px 15px rgba(126,34,206,.4)}
 
-
-        /* --------------------------------------
-           STYLES & COLORS
-           -------------------------------------- */
-        
-        .frame-box {
-            font-size: 24px;
-            font-weight: 900;
-            color: #fbbf24;
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-        }
-
-        .name-box {
-            font-size: 22px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            background: linear-gradient(180deg, #334155 0%, #0f172a 100%);
-        }
-
-        .score-box {
-            font-size: 40px;
-            font-weight: 900;
-            background: linear-gradient(180deg, #020617 0%, #000000 100%);
-            color: white;
-            transition: all 0.3s;
-            text-shadow: 0 3px 6px rgba(0,0,0,0.8);
-        }
-
-        .active-p1 .p1-score {
-            background: linear-gradient(180deg, #3b82f6 0%, #1e3a8a 100%);
-        }
-        .active-p2 .p2-score {
-            background: linear-gradient(180deg, #ef4444 0%, #7f1d1d 100%);
-        }
-
-        .center-info {
-            background: linear-gradient(180deg, #000000 0%, #111111 100%);
-        }
-
-        .center-info .match-format {
-            font-size: 11px;
-            color: #94a3b8;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-        }
-
-        .center-info .points-left {
-            font-size: 15px;
-            color: white;
-            font-weight: 700;
-        }
-        .center-info .points-left span { color: #10b981; }
-
-        /* Break Indicator inside Name */
-        .break-text {
-            font-size: 14px;
-            font-weight: 900;
-            color: #fbbf24;
-            margin: 0 15px;
-            display: none;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.8; transform: scale(0.95); }
-            50% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 0.8; transform: scale(0.95); }
-        }
-
-        .active-p1 .p1-name .break-text { display: block; }
-        .active-p2 .p2-name .break-text { display: block; }
-
-        /* Target Indicator */
-        .active-indicator {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 4px;
-            background: #fbbf24;
-            display: none;
-        }
-        .active-p1 .p1-name .active-indicator { display: block; }
-        .active-p2 .p2-name .active-indicator { display: block; }
-
-        /* Animation */
-        .score-changed { animation: flash 0.4s ease-out; }
-        @keyframes flash {
-            0% { filter: brightness(2); }
-            100% { filter: brightness(1); }
-        }
-
-        /* --------------------------------------
-           LOGO COMPONENT (Top Right)
-           -------------------------------------- */
-        .top-right-logo {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            width: 180px;
-            height: 180px;
-            background: #ffffff;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 4px solid #fbbf24;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-            z-index: 100;
-            overflow: hidden;
-        }
-        
-        .top-right-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-
-        /* --------------------------------------
-           THEMES (Updated for clip-path)
-           -------------------------------------- */
-        body.theme-glass .scoreboard-container { filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3)); }
-        body.theme-glass .name-box { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); }
-        body.theme-glass .frame-box { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); }
-        body.theme-glass .center-info { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px); }
-        body.theme-glass .center-info .match-format, body.theme-glass .center-info .points-left { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-        body.theme-glass .score-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px); }
-
-        body.theme-green .name-box { background: linear-gradient(180deg, #065f46 0%, #064e3b 100%); }
-        body.theme-green .frame-box { background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); }
-        body.theme-green .center-info { background: linear-gradient(180deg, #022c22 0%, #000000 100%); }
-        body.theme-green .score-box { background: #022c22; }
-        body.theme-green .active-p1 .p1-score { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); }
-        body.theme-green .active-p2 .p2-score { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); }
-        
-        body.theme-black .name-box, body.theme-black .frame-box, body.theme-black .center-info, body.theme-black .score-box { 
-            background: #000000;
-        }
-        body.theme-black .active-p1 .p1-score { background: #1d4ed8; }
-        body.theme-black .active-p2 .p2-score { background: #b91c1c; }
-
-        body.theme-neon .scoreboard-container { filter: drop-shadow(0 0 15px rgba(192, 38, 211, 0.5)); }
-        body.theme-neon .name-box { background: #120422; }
-        body.theme-neon .frame-box { background: #120422; color: #22d3ee; }
-        body.theme-neon .center-info { background: linear-gradient(180deg, #2e1065 0%, #120422 100%); }
-        body.theme-neon .center-info .points-left span { color: #22d3ee; }
-        body.theme-neon .score-box { background: #2e1065; }
-        body.theme-neon .active-p1 .p1-score { background: linear-gradient(180deg, #a855f7 0%, #7e22ce 100%); }
-        body.theme-neon .active-p2 .p2-score { background: linear-gradient(180deg, #ec4899 0%, #be185d 100%); }
-        body.theme-neon .top-right-logo { border-color: #c026d3; box-shadow: 0 0 20px rgba(192, 38, 211, 0.6); }
-
-        /* --------------------------------------
-           SUMMARY SCREEN
-           -------------------------------------- */
-        #summary-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
-        }
-
-        #summary-screen.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .summary-bg-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-            z-index: -1;
-            opacity: 0.5;
-        }
-
-        .summary-header {
-            text-align: center;
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 2;
-        }
-
-        .summary-logo {
-            width: 120px;
-            height: 120px;
-            background: white;
-            border-radius: 50%;
-            border: 4px solid #fbbf24;
-            margin-bottom: 15px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .summary-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .summary-match-name {
-            font-size: 38px;
-            font-weight: 900;
-            color: #fbbf24;
-            text-shadow: 0 4px 6px rgba(0,0,0,0.8);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .summary-round {
-            font-size: 26px;
-            font-weight: 700;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            margin-top: 5px;
-        }
-
-        .summary-content {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 30px;
-            width: 95%;
-            max-width: 1300px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            z-index: 2;
-        }
-
-        .summary-player {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .summary-photo-container {
-            position: relative;
-            width: 180px;
-            height: 180px;
-            background: #fbbf24;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            border: 5px solid white;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-        }
-
-        .summary-photo-container.doubles {
-            width: 260px;
-            border-radius: 90px;
-        }
-
-        .summary-photo-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .summary-photo-container.doubles img {
-            width: 50%;
-            height: 100%;
-        }
-
-        .summary-player-name {
-            width: 100%;
-            background: white;
-            color: black;
-            font-size: 30px;
-            font-weight: 900;
-            text-align: center;
-            padding: 12px 0;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            margin-bottom: 25px;
-        }
-
-        .summary-center {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-width: 160px;
-            padding-top: 55px; 
-        }
-
-        .summary-overall-score {
-            font-size: 72px;
-            font-weight: 900;
-            color: white;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
-            margin-bottom: 40px;
-            letter-spacing: 5px;
-        }
-
-        .summary-frames {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .sf-score {
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 28px;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
-        }
-        .sf-score.winner {
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.5);
-            color: #10b981;
-            text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-            box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.2);
-        }
-        .sf-label {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            font-family: 'Outfit', sans-serif;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+        /* ===== SUMMARY ===== */
+        #summary-screen{position:fixed;top:0;left:0;width:100vw;height:100vh;background:linear-gradient(135deg,#1e1b4b,#312e81,#1e1b4b);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .5s;pointer-events:none}
+        #summary-screen.show{opacity:1;pointer-events:auto}
+        .summary-bg-pattern{position:absolute;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px;z-index:-1;opacity:.5}
+        .summary-header{text-align:center;margin-bottom:20px;display:flex;flex-direction:column;align-items:center;z-index:2}
+        .summary-logo{width:120px;height:120px;background:#fff;border-radius:50%;border:4px solid #fbbf24;margin-bottom:15px;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;justify-content:center;align-items:center;overflow:hidden}
+        .summary-logo img{width:100%;height:100%;object-fit:contain}
+        .summary-match-name{font-size:38px;font-weight:900;color:#fbbf24;text-shadow:0 4px 6px rgba(0,0,0,.8);letter-spacing:2px}
+        .summary-round{font-size:26px;font-weight:700;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.8);margin-top:5px}
+        .summary-content{display:flex;align-items:flex-start;justify-content:center;gap:30px;width:95%;max-width:1300px;background:rgba(0,0,0,.4);border-radius:20px;padding:40px;box-shadow:0 10px 30px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);z-index:2}
+        .summary-player{flex:1;display:flex;flex-direction:column;align-items:center}
+        .summary-photo-container{position:relative;width:180px;height:180px;background:#fbbf24;border-radius:50%;display:flex;justify-content:center;align-items:center;overflow:hidden;border:5px solid #fff;box-shadow:0 10px 20px rgba(0,0,0,.5);margin-bottom:20px}
+        .summary-photo-container.doubles{width:260px;border-radius:90px}
+        .summary-photo-container img{width:100%;height:100%;object-fit:cover}
+        .summary-photo-container.doubles img{width:50%;height:100%}
+        .summary-player-name{width:100%;background:#fff;color:#000;font-size:30px;font-weight:900;text-align:center;padding:12px 0;border-radius:8px;box-shadow:0 5px 15px rgba(0,0,0,.3);margin-bottom:25px}
+        .summary-center{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:160px;padding-top:55px}
+        .summary-overall-score{font-size:72px;font-weight:900;color:#fff;text-shadow:0 4px 10px rgba(0,0,0,.8);margin-bottom:40px;letter-spacing:5px}
+        .summary-frames{width:100%;display:flex;flex-direction:column;gap:12px}
+        .sf-score{background:rgba(30,41,59,.8);border:1px solid rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:8px;box-shadow:inset 0 2px 10px rgba(0,0,0,.5)}
+        .sf-score.winner{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.5);color:#10b981}
+        .sf-label{background:rgba(255,255,255,.1);color:#fff;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid rgba(255,255,255,.05)}
     </style>
 </head>
 <body>
-
     <div class="top-right-logo" id="main-logo">
         <img src="logo.png" alt="Logo" onerror="document.getElementById('main-logo').style.display='none'">
     </div>
 
-    <!-- SUMMARY SCREEN OVERLAY -->
+    <!-- SUMMARY SCREEN -->
     <div id="summary-screen">
         <div class="summary-bg-pattern"></div>
         <div class="summary-header">
-            <div class="summary-logo">
-                <img src="logo.png" alt="Logo" crossorigin="anonymous" onerror="this.style.display='none'">
-            </div>
-            <div class="summary-match-name" id="sum-match-name">การแข่งขัน มาดามสนุ๊กเกอร์ ครั้งที่ 3</div>
-            <div class="summary-round" id="sum-round">รอบชิงชนะเลิศ</div>
+            <div class="summary-logo"><img src="logo.png" alt="" crossorigin="anonymous" onerror="this.style.display='none'"></div>
+            <div class="summary-match-name" id="sum-match-name">การแข่งขัน</div>
+            <div class="summary-round" id="sum-round">-</div>
         </div>
-
         <div class="summary-content">
-            <!-- P1 Side -->
             <div class="summary-player">
                 <div class="summary-photo-container" id="sum-p1-photo-box">
                     <img src="p1.png" id="sum-p1-img" crossorigin="anonymous" onerror="this.src='https://ui-avatars.com/api/?name=P1&background=random'">
-                    <img src="p3.png" id="sum-p3-img" crossorigin="anonymous" style="display:none;" onerror="this.src='https://ui-avatars.com/api/?name=P3&background=random'">
+                    <img src="p3.png" id="sum-p3-img" crossorigin="anonymous" style="display:none" onerror="this.src='https://ui-avatars.com/api/?name=P3&background=random'">
                 </div>
                 <div class="summary-player-name" id="sum-p1-name">ผู้เล่น 1</div>
-                <div class="summary-frames" id="sum-p1-frames">
-                    <!-- JS fills -->
-                </div>
+                <div class="summary-frames" id="sum-p1-frames"></div>
             </div>
-
-            <!-- Center -->
             <div class="summary-center">
                 <div class="summary-overall-score" id="sum-overall-score">0 - 0</div>
-                <div class="summary-frames" id="sum-center-labels">
-                    <!-- JS fills -->
-                </div>
+                <div class="summary-frames" id="sum-center-labels"></div>
             </div>
-
-            <!-- P2 Side -->
             <div class="summary-player">
                 <div class="summary-photo-container" id="sum-p2-photo-box">
                     <img src="p2.png" id="sum-p2-img" crossorigin="anonymous" onerror="this.src='https://ui-avatars.com/api/?name=P2&background=random'">
-                    <img src="p4.png" id="sum-p4-img" crossorigin="anonymous" style="display:none;" onerror="this.src='https://ui-avatars.com/api/?name=P4&background=random'">
+                    <img src="p4.png" id="sum-p4-img" crossorigin="anonymous" style="display:none" onerror="this.src='https://ui-avatars.com/api/?name=P4&background=random'">
                 </div>
                 <div class="summary-player-name" id="sum-p2-name">ผู้เล่น 2</div>
-                <div class="summary-frames" id="sum-p2-frames">
-                    <!-- JS fills -->
-                </div>
+                <div class="summary-frames" id="sum-p2-frames"></div>
             </div>
         </div>
     </div>
 
-    <div class="scoreboard-container active-p1" id="overlay-main">
-        
-        <!-- Player 1 -->
-        <div class="section frame-box p1-frame-box" id="p1-frame">0</div>
-        <div class="section name-box p1-name">
-            <div class="active-indicator"></div>
-            <span class="break-text" id="p1-break">เบรก: 0</span>
-            <span id="p1-name">ผู้เล่น 1</span>
+    <!-- MAIN OVERLAY -->
+    <div class="overlay-wrap active-p1" id="overlay-main">
+        <div class="match-banner">
+            <img class="b-logo" src="logo.png" alt="" onerror="this.style.display='none'">
+            <span class="b-text" id="match-name-banner">STC SNOOKER SCORE</span>
         </div>
-        <div class="section score-box p1-score" id="p1-score">0</div>
-
-        <!-- Center Match Info -->
-        <div class="center-wrapper">
-            <div class="section center-info">
-                <div class="match-format" id="match-format">แข่งใครถึง 3</div>
-                <div class="points-left">แต้มบนโต๊ะ: <span id="max-points">147</span></div>
+        <div class="scoreboard">
+            <div class="p-sec p1-sec">
+                <div class="p-info">
+                    <span class="pn" id="p1-name">ผู้เล่น 1</span>
+                    <span class="hc" id="p1-handicap"></span>
+                </div>
+                <div class="sc" id="p1-score">0</div>
+            </div>
+            <div class="c-sec">
+                <span class="fn" id="p1-frame">0</span>
+                <div class="arr arr-l"></div>
+                <div class="c-mid">
+                    <span class="c-time" id="c-time">0:00</span>
+                    <span class="c-balls" id="c-balls">(15)</span>
+                </div>
+                <div class="arr arr-r"></div>
+                <span class="fn" id="p2-frame">0</span>
+                <div class="brk" id="brk">เบรก: 0</div>
+            </div>
+            <div class="p-sec p2-sec">
+                <div class="sc" id="p2-score">0</div>
+                <div class="p-info">
+                    <span class="pn" id="p2-name">ผู้เล่น 2</span>
+                    <span class="hc" id="p2-handicap"></span>
+                </div>
             </div>
         </div>
-
-        <!-- Player 2 -->
-        <div class="section score-box p2-score" id="p2-score">0</div>
-        <div class="section name-box p2-name">
-            <div class="active-indicator"></div>
-            <span id="p2-name">ผู้เล่น 2</span>
-            <span class="break-text" id="p2-break">เบรก: 0</span>
+        <div class="round-bar">
+            <span id="round-label">แข่งใครถึง 3</span>
         </div>
-        <div class="section frame-box p2-frame-box" id="p2-frame">0</div>
-
     </div>
 
     <script>
         const socket = io();
         const overlay = document.getElementById('overlay-main');
-        
-        let lastP1Score = 0;
-        let lastP2Score = 0;
+        let lastP1=0, lastP2=0;
 
-        socket.on('updateState', (state) => {
-            const p1ScoreEl = document.getElementById('p1-score');
-            const p2ScoreEl = document.getElementById('p2-score');
+        socket.on('updateState', (s) => {
+            const p1E=document.getElementById('p1-score'), p2E=document.getElementById('p2-score');
+            if(s.player1.score!==lastP1){p1E.classList.remove('score-changed');void p1E.offsetWidth;p1E.classList.add('score-changed')}
+            if(s.player2.score!==lastP2){p2E.classList.remove('score-changed');void p2E.offsetWidth;p2E.classList.add('score-changed')}
+            lastP1=s.player1.score; lastP2=s.player2.score;
 
-            // Trigger flash animation if score changed
-            if (state.player1.score !== lastP1Score) {
-                p1ScoreEl.classList.remove('score-changed');
-                void p1ScoreEl.offsetWidth;
-                p1ScoreEl.classList.add('score-changed');
-            }
-            if (state.player2.score !== lastP2Score) {
-                p2ScoreEl.classList.remove('score-changed');
-                void p2ScoreEl.offsetWidth;
-                p2ScoreEl.classList.add('score-changed');
-            }
+            document.getElementById('p1-name').innerText=s.player1.name;
+            p1E.innerText=s.player1.score;
+            document.getElementById('p1-frame').innerText=s.player1.frame;
+            document.getElementById('p2-name').innerText=s.player2.name;
+            p2E.innerText=s.player2.score;
+            document.getElementById('p2-frame').innerText=s.player2.frame;
 
-            lastP1Score = state.player1.score;
-            lastP2Score = state.player2.score;
+            // Handicap
+            const h=s.handicap||{p1:0,p2:0};
+            document.getElementById('p1-handicap').innerText=h.p1?`(+${h.p1})`:'';
+            document.getElementById('p2-handicap').innerText=h.p2?`(+${h.p2})`:'';
 
-            document.getElementById('p1-name').innerText = state.player1.name;
-            p1ScoreEl.innerText = state.player1.score;
-            document.getElementById('p1-frame').innerText = state.player1.frame;
-            
-            document.getElementById('p2-name').innerText = state.player2.name;
-            p2ScoreEl.innerText = state.player2.score;
-            document.getElementById('p2-frame').innerText = state.player2.frame;
-
-            // Extra Info
-            document.getElementById('match-format').innerText = `แข่งใครถึง ${state.matchFormat}`;
-            const maxPoints = (state.redsLeft * 8) + 27;
-            document.getElementById('max-points').innerText = maxPoints;
-
-            document.getElementById('p1-break').innerText = `เบรก: ${state.currentBreak}`;
-            document.getElementById('p2-break').innerText = `เบรก: ${state.currentBreak}`;
-            
-            // Show break text only if > 0
-            document.getElementById('p1-break').style.display = (state.activePlayer === 1 && state.currentBreak > 0) ? 'block' : 'none';
-            document.getElementById('p2-break').style.display = (state.activePlayer === 2 && state.currentBreak > 0) ? 'block' : 'none';
-
-            // Theme Setting
-            document.body.className = state.theme || 'theme-default';
-
-            // Update Active Player
-            overlay.className = 'scoreboard-container'; 
-            if (state.activePlayer === 1) {
-                overlay.classList.add('active-p1');
+            // Match info
+            if(s.matchInfo){
+                document.getElementById('match-name-banner').innerText=s.matchInfo.name||'STC SNOOKER SCORE';
+                document.getElementById('round-label').innerText=s.matchInfo.round||`แข่งใครถึง ${s.matchFormat}`;
             } else {
-                overlay.classList.add('active-p2');
+                document.getElementById('round-label').innerText=`แข่งใครถึง ${s.matchFormat}`;
             }
 
-            // --- SUMMARY SCREEN LOGIC ---
-            if(state.summary) {
-                const sumScreen = document.getElementById('summary-screen');
-                if(state.summary.show) {
-                    sumScreen.classList.add('show');
-                } else {
-                    sumScreen.classList.remove('show');
-                }
+            document.getElementById('c-balls').innerText=`(${s.redsLeft})`;
 
-                document.getElementById('sum-match-name').innerText = state.summary.matchName || 'การแข่งขัน มาดามสนุ๊กเกอร์';
-                document.getElementById('sum-round').innerText = state.summary.round || '-';
-                document.getElementById('sum-overall-score').innerText = `${state.player1.frame} - ${state.player2.frame}`;
-                
-                document.getElementById('sum-p1-name').innerText = state.player1.name;
-                document.getElementById('sum-p2-name').innerText = state.player2.name;
+            // Break
+            const bk=document.getElementById('brk');
+            if(s.currentBreak>0){bk.innerText=`เบรก: ${s.currentBreak}`;bk.classList.add('show')}else{bk.classList.remove('show')}
 
-                const p1Box = document.getElementById('sum-p1-photo-box');
-                const p2Box = document.getElementById('sum-p2-photo-box');
-                
-                document.getElementById('sum-p1-img').src = state.summary.p1Photo || 'https://ui-avatars.com/api/?name=P1&background=random';
-                document.getElementById('sum-p2-img').src = state.summary.p2Photo || 'https://ui-avatars.com/api/?name=P2&background=random';
-                
-                if(state.summary.isDoubles) {
-                    p1Box.classList.add('doubles');
-                    p2Box.classList.add('doubles');
-                    document.getElementById('sum-p3-img').style.display = 'block';
-                    document.getElementById('sum-p3-img').src = state.summary.p3Photo || 'https://ui-avatars.com/api/?name=P3&background=random';
-                    document.getElementById('sum-p4-img').style.display = 'block';
-                    document.getElementById('sum-p4-img').src = state.summary.p4Photo || 'https://ui-avatars.com/api/?name=P4&background=random';
-                } else {
-                    p1Box.classList.remove('doubles');
-                    p2Box.classList.remove('doubles');
-                    document.getElementById('sum-p3-img').style.display = 'none';
-                    document.getElementById('sum-p4-img').style.display = 'none';
-                }
+            // Theme
+            document.body.className=s.theme||'theme-default';
 
-                // Render Frame Rows
-                const p1FramesEl = document.getElementById('sum-p1-frames');
-                const p2FramesEl = document.getElementById('sum-p2-frames');
-                const labelsEl = document.getElementById('sum-center-labels');
-                
-                p1FramesEl.innerHTML = '';
-                p2FramesEl.innerHTML = '';
-                labelsEl.innerHTML = '';
+            // Active
+            overlay.classList.remove('active-p1','active-p2');
+            overlay.classList.add(s.activePlayer===1?'active-p1':'active-p2');
 
-                // Calculate number of rows to show
-                // Minimum 3 rows, or current frames played + 1
-                const actualRows = Math.max(state.frames.length + 1, 3);
-
-                for(let i=0; i<actualRows; i++) {
-                    const frameData = state.frames[i];
-                    
-                    let p1Score = '-';
-                    let p2Score = '-';
-                    let winner = null;
-
-                    if (frameData) {
-                        p1Score = frameData.p1Score;
-                        p2Score = frameData.p2Score;
-                        winner = frameData.winner;
-                    } else if (i === state.frames.length) {
-                        // Current active frame
-                        p1Score = state.player1.score;
-                        p2Score = state.player2.score;
-                    }
-
-                    const p1Div = document.createElement('div');
-                    p1Div.className = `sf-score ${winner === 1 ? 'winner' : ''}`;
-                    p1Div.innerText = p1Score;
-                    p1FramesEl.appendChild(p1Div);
-
-                    const labelDiv = document.createElement('div');
-                    labelDiv.className = 'sf-label';
-                    labelDiv.innerText = `เฟรม ${i+1}`;
-                    if (i === state.frames.length) {
-                        labelDiv.style.border = '1px solid #fbbf24';
-                        labelDiv.style.background = 'rgba(251, 191, 36, 0.2)';
-                        labelDiv.style.color = '#fbbf24';
-                    }
-                    labelsEl.appendChild(labelDiv);
-
-                    const p2Div = document.createElement('div');
-                    p2Div.className = `sf-score ${winner === 2 ? 'winner' : ''}`;
-                    p2Div.innerText = p2Score;
-                    p2FramesEl.appendChild(p2Div);
+            // Summary
+            if(s.summary){
+                const ss=document.getElementById('summary-screen');
+                s.summary.show?ss.classList.add('show'):ss.classList.remove('show');
+                document.getElementById('sum-match-name').innerText=s.summary.matchName||'';
+                document.getElementById('sum-round').innerText=s.summary.round||'-';
+                document.getElementById('sum-overall-score').innerText=`${s.player1.frame} - ${s.player2.frame}`;
+                document.getElementById('sum-p1-name').innerText=s.player1.name;
+                document.getElementById('sum-p2-name').innerText=s.player2.name;
+                document.getElementById('sum-p1-img').src=s.summary.p1Photo||'https://ui-avatars.com/api/?name=P1&background=random';
+                document.getElementById('sum-p2-img').src=s.summary.p2Photo||'https://ui-avatars.com/api/?name=P2&background=random';
+                const p1B=document.getElementById('sum-p1-photo-box'),p2B=document.getElementById('sum-p2-photo-box');
+                if(s.summary.isDoubles){p1B.classList.add('doubles');p2B.classList.add('doubles');document.getElementById('sum-p3-img').style.display='block';document.getElementById('sum-p3-img').src=s.summary.p3Photo||'';document.getElementById('sum-p4-img').style.display='block';document.getElementById('sum-p4-img').src=s.summary.p4Photo||''}
+                else{p1B.classList.remove('doubles');p2B.classList.remove('doubles');document.getElementById('sum-p3-img').style.display='none';document.getElementById('sum-p4-img').style.display='none'}
+                const f1=document.getElementById('sum-p1-frames'),f2=document.getElementById('sum-p2-frames'),fl=document.getElementById('sum-center-labels');
+                f1.innerHTML='';f2.innerHTML='';fl.innerHTML='';
+                const rows=Math.max((s.frames||[]).length+1,3);
+                for(let i=0;i<rows;i++){
+                    const fd=(s.frames||[])[i];let s1='-',s2='-',w=null;
+                    if(fd){s1=fd.p1Score;s2=fd.p2Score;w=fd.winner}else if(i===(s.frames||[]).length){s1=s.player1.score;s2=s.player2.score}
+                    const d1=document.createElement('div');d1.className=`sf-score ${w===1?'winner':''}`;d1.innerText=s1;f1.appendChild(d1);
+                    const dl=document.createElement('div');dl.className='sf-label';dl.innerText=`เฟรม ${i+1}`;
+                    if(i===(s.frames||[]).length){dl.style.border='1px solid #fbbf24';dl.style.background='rgba(251,191,36,0.2)';dl.style.color='#fbbf24'}
+                    fl.appendChild(dl);
+                    const d2=document.createElement('div');d2.className=`sf-score ${w===2?'winner':''}`;d2.innerText=s2;f2.appendChild(d2);
                 }
             }
         });
 
-        socket.on('TAKE_SCREENSHOT', async () => {
-            const el = document.getElementById('summary-screen');
-            if (!el.classList.contains('show')) {
-                console.log("Screenshot requested but screen is hidden.");
-                return;
-            }
-            try {
-                await new Promise(r => setTimeout(r, 300));
-                
-                const canvas = await html2canvas(el, { 
-                    backgroundColor: '#0f172a',
-                    scale: 2,
-                    useCORS: true,
-                    logging: false
-                });
-                const base64 = canvas.toDataURL('image/png');
-                socket.emit('SCREENSHOT_DATA', base64);
-            } catch(e) {
-                console.error("Screenshot error:", e);
-            }
+        socket.on('TAKE_SCREENSHOT', async()=>{
+            const el=document.getElementById('summary-screen');
+            if(!el.classList.contains('show'))return;
+            try{await new Promise(r=>setTimeout(r,300));const c=await html2canvas(el,{backgroundColor:'#0f172a',scale:2,useCORS:true,logging:false});socket.emit('SCREENSHOT_DATA',c.toDataURL('image/png'))}catch(e){console.error(e)}
         });
     </script>
 </body>
