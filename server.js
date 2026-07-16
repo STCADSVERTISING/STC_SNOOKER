@@ -6,12 +6,21 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 1e8 }); // Allow large base64 strings
+const io = new Server(server, {
+  maxHttpBufferSize: 5e6, // 5MB max (was 100MB - too large)
+  pingTimeout: 30000,
+  pingInterval: 10000,
+  transports: ['websocket', 'polling'], // Prefer WebSocket
+  cors: { origin: '*' }
+});
 
 const PORT = process.env.PORT || 3000;
 
+// Health check for Render (prevents sleep + monitors)
+app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
+
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 const dataDir = path.join(__dirname, 'data');
 const historyFile = path.join(dataDir, 'history.json');
@@ -105,12 +114,16 @@ io.on('connection', (socket) => {
   socket.emit('updateHistory', matchHistory);
 
   socket.on('action', (action) => {
-    if (action.type === 'REQ_SCREENSHOT') {
-      io.emit('TAKE_SCREENSHOT');
-      return;
+    try {
+      if (action.type === 'REQ_SCREENSHOT') {
+        io.emit('TAKE_SCREENSHOT');
+        return;
+      }
+      processAction(action);
+      io.emit('updateState', gameState);
+    } catch (err) {
+      console.error('Action error:', err.message, action);
     }
-    processAction(action);
-    io.emit('updateState', gameState);
   });
   
   socket.on('SCREENSHOT_DATA', (data) => {
@@ -120,11 +133,18 @@ io.on('connection', (socket) => {
   socket.on('requestHistory', () => {
     socket.emit('updateHistory', matchHistory);
   });
+  
+  socket.on('error', (err) => {
+    console.error('Socket error:', err.message);
+  });
 });
 
 function processAction(action) {
-  const skipHistory = ['UNDO', 'SET_NAME', 'SET_MATCH_FORMAT', 'SET_MAX_REDS', 'TIMER_START', 'TIMER_PAUSE', 'TIMER_RESET', 'ADD_ROSTER', 'DEL_ROSTER', 'SAVE_MATCH', 'SET_THEME', 'SET_HANDICAP', 'SET_MATCH_INFO'];
+  if (!action || !action.type) return; // Safety check
+  
+  const skipHistory = ['UNDO', 'SET_NAME', 'SET_MATCH_FORMAT', 'SET_MAX_REDS', 'TIMER_START', 'TIMER_PAUSE', 'TIMER_RESET', 'ADD_ROSTER', 'DEL_ROSTER', 'SAVE_MATCH', 'SET_THEME', 'SET_HANDICAP', 'SET_MATCH_INFO', 'TOGGLE_SUMMARY', 'UPDATE_SUMMARY', 'SET_ACTIVE_PLAYER'];
   if (!skipHistory.includes(action.type)) {
+    // Don't store summary/photos in history - too large, causes memory bloat
     const stateCopy = JSON.parse(JSON.stringify({
       player1: gameState.player1,
       player2: gameState.player2,
@@ -132,65 +152,83 @@ function processAction(action) {
       currentBreak: gameState.currentBreak,
       redsLeft: gameState.redsLeft,
       stats: gameState.stats,
-      frames: gameState.frames,
-      summary: gameState.summary
+      frames: gameState.frames
     }));
     gameState.history.push(stateCopy);
-    if (gameState.history.length > 50) gameState.history.shift();
+    if (gameState.history.length > 30) gameState.history.shift();
   }
 
   const now = Date.now();
 
   switch(action.type) {
-    case 'ADD_SCORE':
+    case 'ADD_SCORE': {
+      let pts = Number(action.points) || 0;
+      if (pts <= 0) break;
+      
+      // ไฟฟ้า: 1 ลูก = 1 แต้ม เสมอ ไม่ว่าจะเป็นลูกอะไร
+      if (gameState.gameMode === 'faifa') {
+        pts = 1;
+      }
+      
       if (gameState.activePlayer !== action.player) {
         gameState.currentBreak = 0;
       }
       gameState.activePlayer = action.player;
-      gameState.currentBreak += action.points;
+      gameState.currentBreak += pts;
       
       if (action.player === 1) {
-        gameState.player1.score += action.points;
-        gameState.stats.p1TotalPoints += action.points;
+        gameState.player1.score += pts;
+        gameState.stats.p1TotalPoints += pts;
         if (gameState.currentBreak > gameState.stats.p1HighestBreak) gameState.stats.p1HighestBreak = gameState.currentBreak;
       }
       if (action.player === 2) {
-        gameState.player2.score += action.points;
-        gameState.stats.p2TotalPoints += action.points;
+        gameState.player2.score += pts;
+        gameState.stats.p2TotalPoints += pts;
         if (gameState.currentBreak > gameState.stats.p2HighestBreak) gameState.stats.p2HighestBreak = gameState.currentBreak;
       }
 
-      if (action.points === 1 && !action.isFreeBall && gameState.redsLeft > 0) {
+      // Only reduce reds in snooker mode
+      if (gameState.gameMode === 'snooker' && pts === 1 && !action.isFreeBall && gameState.redsLeft > 0) {
         gameState.redsLeft -= 1;
       }
       break;
+    }
 
-    case 'FOUL':
+    case 'FOUL': {
+      const foulPts = Number(action.points) || 4;
       const opponent = action.player === 1 ? 2 : 1;
       if (opponent === 1) {
-        gameState.player1.score += action.points;
-        gameState.stats.p1TotalPoints += action.points;
+        gameState.player1.score += foulPts;
+        gameState.stats.p1TotalPoints += foulPts;
       }
       if (opponent === 2) {
-        gameState.player2.score += action.points;
-        gameState.stats.p2TotalPoints += action.points;
+        gameState.player2.score += foulPts;
+        gameState.stats.p2TotalPoints += foulPts;
       }
       gameState.currentBreak = 0;
       gameState.activePlayer = opponent;
       break;
+    }
 
-    case 'CUSTOM_SCORE':
+    case 'CUSTOM_SCORE': {
+      const cPts = Number(action.points) || 0;
+      if (![1, 2].includes(action.player) || cPts === 0) break;
+      if (cPts > 0 && gameState.activePlayer !== action.player) {
+        gameState.activePlayer = action.player;
+        gameState.currentBreak = 0;
+      }
       if (action.player === 1) {
-        gameState.player1.score += action.points;
-        gameState.stats.p1TotalPoints += action.points;
-        if (gameState.player1.score < 0) gameState.player1.score = 0;
+        const oldScore = gameState.player1.score;
+        gameState.player1.score = Math.max(0, oldScore + cPts);
+        gameState.stats.p1TotalPoints += gameState.player1.score - oldScore;
       }
       if (action.player === 2) {
-        gameState.player2.score += action.points;
-        gameState.stats.p2TotalPoints += action.points;
-        if (gameState.player2.score < 0) gameState.player2.score = 0;
+        const oldScore = gameState.player2.score;
+        gameState.player2.score = Math.max(0, oldScore + cPts);
+        gameState.stats.p2TotalPoints += gameState.player2.score - oldScore;
       }
       break;
+    }
 
     case 'UNDO':
       if (gameState.history.length > 0) {
@@ -211,6 +249,8 @@ function processAction(action) {
       break;
 
     case 'ADD_FRAME':
+      if (![1, 2].includes(action.player)) break;
+      if (gameState.player1.frame >= gameState.matchFormat || gameState.player2.frame >= gameState.matchFormat) break;
       gameState.frames.push({
         p1Score: gameState.player1.score,
         p2Score: gameState.player2.score,
@@ -221,18 +261,22 @@ function processAction(action) {
       resetTable();
       break;
 
-    case 'SUB_FRAME':
-      if (action.player === 1 && gameState.player1.frame > 0) {
-          gameState.player1.frame -= 1;
-          gameState.frames.pop();
-      }
-      if (action.player === 2 && gameState.player2.frame > 0) {
-          gameState.player2.frame -= 1;
-          gameState.frames.pop();
-      }
+    case 'SUB_FRAME': {
+      if (![1, 2].includes(action.player)) break;
+      const player = action.player === 1 ? gameState.player1 : gameState.player2;
+      if (player.frame <= 0) break;
+      const frameIndex = gameState.frames.map(frame => frame.winner).lastIndexOf(action.player);
+      if (frameIndex === -1) break;
+      player.frame -= 1;
+      gameState.frames.splice(frameIndex, 1);
       break;
+    }
 
-    case 'SET_MATCH_FORMAT': gameState.matchFormat = action.format; break;
+    case 'SET_MATCH_FORMAT': {
+      const format = Number(action.format);
+      if (Number.isInteger(format) && format >= 1 && format <= 35) gameState.matchFormat = format;
+      break;
+    }
     case 'SET_MAX_REDS': 
       gameState.maxReds = action.reds; 
       gameState.redsLeft = action.reds; 
@@ -243,12 +287,17 @@ function processAction(action) {
       if(gameState.redsLeft > gameState.maxReds) gameState.redsLeft = gameState.maxReds;
       break;
 
+    case 'SET_ACTIVE_PLAYER':
+      gameState.activePlayer = action.player;
+      gameState.currentBreak = 0;
+      break;
+
     case 'SET_THEME': 
       gameState.theme = action.theme; 
       break;
 
     case 'SET_GAME_MODE':
-      gameState.gameMode = action.mode;
+      if (['snooker', 'faifa', 'taem'].includes(action.mode)) gameState.gameMode = action.mode;
       break;
 
     case 'SET_HANDICAP':
@@ -280,7 +329,7 @@ function processAction(action) {
       resetTable();
       break;
 
-    case 'SAVE_MATCH':
+    case 'SAVE_MATCH': {
       const record = {
         id: Date.now(),
         date: new Date().toLocaleString('th-TH'),
@@ -293,7 +342,7 @@ function processAction(action) {
         frames: JSON.parse(JSON.stringify(gameState.frames))
       };
       matchHistory.unshift(record);
-      fs.writeFileSync(historyFile, JSON.stringify(matchHistory, null, 2));
+      try { fs.writeFileSync(historyFile, JSON.stringify(matchHistory, null, 2)); } catch(e) { console.error('Save error:', e.message); }
       io.emit('updateHistory', matchHistory);
 
       gameState.player1.frame = 0;
@@ -302,6 +351,7 @@ function processAction(action) {
       gameState.frames = [];
       resetTable();
       break;
+    }
 
     case 'DELETE_HISTORY':
       matchHistory = matchHistory.filter(record => record.id !== action.id);
@@ -309,18 +359,18 @@ function processAction(action) {
       io.emit('updateHistory', matchHistory);
       break;
 
-    case 'SWAP_PLAYERS':
+    case 'SWAP_PLAYERS': {
       const tempP1 = JSON.parse(JSON.stringify(gameState.player1));
       gameState.player1 = JSON.parse(JSON.stringify(gameState.player2));
       gameState.player2 = tempP1;
-      const tempStatsP1Break = gameState.stats.p1HighestBreak;
+      const tempB = gameState.stats.p1HighestBreak;
       gameState.stats.p1HighestBreak = gameState.stats.p2HighestBreak;
-      gameState.stats.p2HighestBreak = tempStatsP1Break;
-      const tempStatsP1Total = gameState.stats.p1TotalPoints;
+      gameState.stats.p2HighestBreak = tempB;
+      const tempT = gameState.stats.p1TotalPoints;
       gameState.stats.p1TotalPoints = gameState.stats.p2TotalPoints;
-      gameState.stats.p2TotalPoints = tempStatsP1Total;
-      // We do not swap frame history logic since it's already recorded
+      gameState.stats.p2TotalPoints = tempT;
       break;
+    }
 
     case 'TIMER_START':
       if (!gameState.timer.isRunning) {
