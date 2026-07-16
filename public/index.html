@@ -243,12 +243,12 @@
 
             <!-- Right Side: Fouls (Faifa) -->
             <div class="glass foul-container">
-                <div class="section-title">ฟาวล์ / ปรับแต้ม</div>
+                <div class="section-title">ฟาวล์ / ปรับแต้ม (ไฟฟ้า)</div>
                 <div class="foul-grid">
-                    <button class="foul-btn" onclick="foul(5)">คู่แข่ง +5</button>
-                    <button class="foul-btn" onclick="foul(7)">คู่แข่ง +7</button>
-                    <button class="foul-btn" onclick="customScore(activePlayerId, -5)">หักตัวเอง -5</button>
-                    <button class="foul-btn" onclick="customScore(activePlayerId, -7)">หักตัวเอง -7</button>
+                    <button class="foul-btn" onclick="foul(2)">ฟาวล์ คู่แข่ง +2</button>
+                    <button class="foul-btn" onclick="customScore(activePlayerId, -2)">หักตัวเอง -2</button>
+                    <button class="foul-btn" style="background:rgba(16,185,129,0.2); border-color:#10b981;" onclick="customScore(activePlayerId, 1)">+1 แต้ม</button>
+                    <button class="foul-btn" style="background:rgba(239,68,68,0.2); border-color:#ef4444;" onclick="customScore(activePlayerId, -1)">-1 แต้ม</button>
                 </div>
             </div>
         </div>
@@ -305,10 +305,18 @@
     <script>
         const socket = io();
         let activePlayerId = 1;
+        const matchFormatSelect = document.getElementById('match-format');
+        for (let frames = 7; frames <= 15; frames += 1) {
+            const option = document.createElement('option');
+            option.value = frames;
+            option.textContent = `แข่งใครถึง ${frames} เฟรม`;
+            matchFormatSelect.appendChild(option);
+        }
         
         let timerRunning = false;
         let timerElapsed = 0;
         let timerStart = null;
+        let lastRosterSignature = '';
 
         // Custom Modal Logic
         let confirmCallback = null;
@@ -406,8 +414,11 @@
 
             // Update Roster
             const rosterContainer = document.getElementById('roster-list');
-            rosterContainer.innerHTML = '';
-            state.playersRoster.forEach(name => {
+            const rosterSignature = JSON.stringify(state.playersRoster || []);
+            if (rosterSignature !== lastRosterSignature) {
+              lastRosterSignature = rosterSignature;
+              rosterContainer.replaceChildren();
+              (state.playersRoster || []).forEach(name => {
                 const item = document.createElement('div');
                 item.className = 'roster-item';
                 item.innerHTML = `
@@ -419,7 +430,8 @@
                     </div>
                 `;
                 rosterContainer.appendChild(item);
-            });
+              });
+            }
 
             activePlayerId = state.activePlayer;
             updateActiveCard();
@@ -448,6 +460,7 @@
         function setActivePlayer(player) {
             activePlayerId = player;
             updateActiveCard();
+            socket.emit('action', { type: 'SET_ACTIVE_PLAYER', player: player });
         }
 
         function updateActiveCard() {

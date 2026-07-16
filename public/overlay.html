@@ -22,7 +22,7 @@
         .scoreboard{display:flex;align-items:stretch;width:100%;min-height:76px;border-radius:16px;overflow:visible;position:relative;background:linear-gradient(180deg,#1c1c1c 0%,#0a0a0a 100%);border:2px solid #b8860b;box-shadow:0 0 25px rgba(184,134,11,.35),0 0 60px rgba(184,134,11,.12),inset 0 1px 0 rgba(255,255,255,.06)}
 
         /* Player sections */
-        .p-sec{display:flex;align-items:center;flex:1;padding:8px 20px;gap:12px;transition:all .3s}
+        .p-sec{display:flex;align-items:center;flex:1;padding:8px 20px;gap:12px;transition:all .3s;position:relative}
         .p1-sec{justify-content:flex-start;border-radius:14px 0 0 14px}
         .p2-sec{justify-content:flex-end;border-radius:0 14px 14px 0}
         .p-info{display:flex;flex-direction:column;min-width:0;flex:1}
@@ -50,11 +50,16 @@
         .c-mid .c-balls{font-size:13px;color:#10b981;font-weight:700;text-shadow:0 0 6px rgba(16,185,129,.4)}
         
         /* Arrows */
-        .arr{width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;flex-shrink:0;filter:drop-shadow(0 0 4px rgba(34,197,94,.6))}
+        .arr{width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;flex-shrink:0;filter:drop-shadow(0 0 4px rgba(34,197,94,.6));animation:arrowLive 1s ease-in-out infinite}
         .arr-l{border-right:13px solid #22c55e;display:none}
         .arr-r{border-left:13px solid #22c55e;display:none}
         .active-p1 .arr-l{display:block}
         .active-p2 .arr-r{display:block}
+        @keyframes arrowLive{50%{transform:scale(1.25);filter:drop-shadow(0 0 10px rgba(34,197,94,1))}}
+
+        .p-sec::after{content:'กำลังแทง';position:absolute;top:-18px;padding:3px 11px;border-radius:10px 10px 0 0;background:linear-gradient(180deg,#22c55e,#15803d);font-size:10px;font-weight:700;letter-spacing:.5px;opacity:0;transform:translateY(5px);transition:.25s;box-shadow:0 -3px 12px rgba(34,197,94,.35)}
+        .p1-sec::after{left:22px}.p2-sec::after{right:22px}
+        .active-p1 .p1-sec::after,.active-p2 .p2-sec::after{opacity:1;transform:translateY(0)}
 
         /* Break display */
         .brk{position:absolute;top:-34px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2a2000,#1a1400);padding:4px 20px;border-radius:14px;font-size:14px;font-weight:700;color:#f5d77a;white-space:nowrap;display:none;border:1px solid #b8860b;box-shadow:0 0 15px rgba(184,134,11,.4)}
@@ -150,7 +155,7 @@
     </div>
 
     <!-- MAIN OVERLAY -->
-    <div class="overlay-wrap active-p1" id="overlay-main">
+    <div class="overlay-wrap" id="overlay-main">
         <div class="match-banner">
             <img class="b-logo" src="logo.png" alt="" onerror="this.style.display='none'">
             <span class="b-text" id="match-name-banner">STC SNOOKER SCORE</span>
@@ -191,8 +196,16 @@
         const socket = io();
         const overlay = document.getElementById('overlay-main');
         let lastP1=0, lastP2=0;
+        let timerRunning=false,timerElapsed=0,timerStartedAt=null;
+        let lastSummaryKey='';
+        function setImageIfChanged(element, src) {
+            if (element.getAttribute('src') !== src) element.setAttribute('src', src);
+        }
 
         socket.on('updateState', (s) => {
+            timerRunning=Boolean(s.timer&&s.timer.isRunning);
+            timerElapsed=Number(s.timer&&s.timer.elapsedSeconds)||0;
+            timerStartedAt=s.timer&&s.timer.startedAt;
             const p1E=document.getElementById('p1-score'), p2E=document.getElementById('p2-score');
             if(s.player1.score!==lastP1){p1E.classList.remove('score-changed');void p1E.offsetWidth;p1E.classList.add('score-changed')}
             if(s.player2.score!==lastP2){p2E.classList.remove('score-changed');void p2E.offsetWidth;p2E.classList.add('score-changed')}
@@ -240,11 +253,14 @@
                 document.getElementById('sum-overall-score').innerText=`${s.player1.frame} - ${s.player2.frame}`;
                 document.getElementById('sum-p1-name').innerText=s.player1.name;
                 document.getElementById('sum-p2-name').innerText=s.player2.name;
-                document.getElementById('sum-p1-img').src=s.summary.p1Photo||'https://ui-avatars.com/api/?name=P1&background=random';
-                document.getElementById('sum-p2-img').src=s.summary.p2Photo||'https://ui-avatars.com/api/?name=P2&background=random';
+                setImageIfChanged(document.getElementById('sum-p1-img'),s.summary.p1Photo||'https://ui-avatars.com/api/?name=P1&background=random');
+                setImageIfChanged(document.getElementById('sum-p2-img'),s.summary.p2Photo||'https://ui-avatars.com/api/?name=P2&background=random');
                 const p1B=document.getElementById('sum-p1-photo-box'),p2B=document.getElementById('sum-p2-photo-box');
-                if(s.summary.isDoubles){p1B.classList.add('doubles');p2B.classList.add('doubles');document.getElementById('sum-p3-img').style.display='block';document.getElementById('sum-p3-img').src=s.summary.p3Photo||'';document.getElementById('sum-p4-img').style.display='block';document.getElementById('sum-p4-img').src=s.summary.p4Photo||''}
+                if(s.summary.isDoubles){p1B.classList.add('doubles');p2B.classList.add('doubles');document.getElementById('sum-p3-img').style.display='block';setImageIfChanged(document.getElementById('sum-p3-img'),s.summary.p3Photo||'');document.getElementById('sum-p4-img').style.display='block';setImageIfChanged(document.getElementById('sum-p4-img'),s.summary.p4Photo||'')}
                 else{p1B.classList.remove('doubles');p2B.classList.remove('doubles');document.getElementById('sum-p3-img').style.display='none';document.getElementById('sum-p4-img').style.display='none'}
+                const summaryKey=JSON.stringify({frames:s.frames,p1:s.player1.score,p2:s.player2.score});
+                if(summaryKey===lastSummaryKey)return;
+                lastSummaryKey=summaryKey;
                 const f1=document.getElementById('sum-p1-frames'),f2=document.getElementById('sum-p2-frames'),fl=document.getElementById('sum-center-labels');
                 f1.innerHTML='';f2.innerHTML='';fl.innerHTML='';
                 const rows=Math.max((s.frames||[]).length+1,3);
@@ -259,6 +275,16 @@
                 }
             }
         });
+
+        function updateOverlayTimer(){
+            let seconds=timerElapsed;
+            if(timerRunning&&timerStartedAt)seconds+=Math.max(0,Math.floor((Date.now()-timerStartedAt)/1000));
+            const hours=Math.floor(seconds/3600);
+            const minutes=Math.floor((seconds%3600)/60);
+            const secs=seconds%60;
+            document.getElementById('c-time').innerText=hours>0?`${hours}:${String(minutes).padStart(2,'0')}:${String(secs).padStart(2,'0')}`:`${minutes}:${String(secs).padStart(2,'0')}`;
+        }
+        setInterval(updateOverlayTimer,1000);
 
         socket.on('TAKE_SCREENSHOT', async()=>{
             const el=document.getElementById('summary-screen');
